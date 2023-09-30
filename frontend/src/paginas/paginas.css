@@ -1,0 +1,51 @@
+/* Diagramas */
+.custom-styles .excalidraw {
+    --color-primary: #CDE1DF;
+    --color-primary-darker: #179487;
+    --color-primary-darkest: #253332;
+    --color-primary-light: #88e3da;
+}
+
+.custom-styles .excalidraw.theme--dark {
+    --color-primary: #53C3B8;
+    --color-primary-darker: #253332;
+    --color-primary-darkest: #57948e;
+    --color-primary-light: #CDE1DF;
+}
+
+
+/* Cards */
+
+.card-container {
+    display: flex;
+    flex-wrap: wrap;
+    /* Permite que os cartões se movam para a próxima linha quando não couberem na largura da tela */
+    justify-content: flex-start;
+    /* Alinha os cartões à esquerda */
+}
+
+.paper {
+    /* Estilos para o seu cartão, por exemplo, largura fixa ou flexível */
+    margin: 10px;
+    /* Espaçamento entre os cartões */
+    display: inline-block;
+    /* Faz com que os cartões ocupem apenas o espaço necessário e fiquem lado a lado */
+    margin-right: 100px;
+    /* Adiciona espaço à direita de cada cartão */
+    background-color: #ff0000;
+    /* Cor de fundo vermelha para os cartões */
+
+}
+
+/* Dentro do seu arquivo CSS */
+.item-list {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+  
+  /* Adicione um espaçamento entre os itens */
+  .item-list .item {
+    margin-right: 10px; /* Adiciona 10 pixels de espaçamento à direita de cada item */
+  }
