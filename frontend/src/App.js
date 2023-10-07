@@ -10,6 +10,8 @@ import Diagrama from './paginas/diagrama';
 import Config from './paginas/config';
 import Biblioteca from './paginas/biblioteca';
 import Turma from './paginas/turma';
+import {Home} from './paginas/home';
+import Logout from './paginas/logout';
 
 
 function App() {
@@ -20,14 +22,15 @@ function App() {
       <br />
       <Container>
         <Routes>
-          <Route  path='/' element={<Login />} />
+          <Route  path='/' element={<Home />} />
           <Route path='/pastas' element={<Biblioteca />} />
           <Route path='/config' element={<Config />} />
           <Route path='/diagrama' element={<Diagrama />} />
           <Route path='/turma' element={<Turma />} />
           <Route path='/login' element={<Login />} />
-        </Routes>
+          <Route path='/logout' element={<Logout />} />
 
+        </Routes>
       </Container>
     </Router>
   );

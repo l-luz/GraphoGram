@@ -35,7 +35,7 @@ function ItemPasta({ item }) {
             <Paper
                 className="folder-list item-list"
                 elevation={6}
-                textAlign='center'
+                textalign='center'
                 style={{
                     padding: '0 20px',
                     boxSizing: 'border-box'
@@ -155,6 +155,7 @@ function ItemDiagrama({ item }) {
 
 class Biblioteca extends Component {
 
+    
     render() {
         return (
             <div className="Biblioteca" >

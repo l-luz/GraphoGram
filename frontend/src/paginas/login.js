@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React, { useState, useEffect } from 'react';
 import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -9,9 +9,10 @@ import Link from '@mui/material/Link';
 import Paper from '@mui/material/Paper';
 import Box from '@mui/material/Box';
 import Grid from '@mui/material/Grid';
-import {AiOutlineLock} from 'react-icons/ai';
+import { AiOutlineLock } from 'react-icons/ai';
 import Typography from '@mui/material/Typography';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
+import axios from "axios";
 
 function Copyright(props) {
     return (
@@ -31,24 +32,41 @@ function Copyright(props) {
 const defaultTheme = createTheme();
 
 function Login() {
-    const handleSubmit = (event) => {
-        event.preventDefault();
-        const data = new FormData(event.currentTarget);
-        console.log({
-            email: data.get('email'),
-            password: data.get('password'),
-        });
-    };
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+
+    // Create the submit method.
+    const handleSubmit = async e => {
+        e.preventDefault();
+        const user = {
+            username: username,
+            password: password
+        };
+        // Create the POST request
+        const { data } = await
+            axios.post('/api/login/',
+                user, {
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                withCredentials: true,
+            }
+            );
+
+        // Initialize the access & refresh token in localstorage.      
+        localStorage.clear();
+        localStorage.setItem('access_token', data.access);
+        localStorage.setItem('refresh_token', data.refresh);
+        axios.defaults.headers.common['Authorization'] =
+            `Bearer ${data['access']}`;
+        window.location.href = '/';
+    }
 
     return (
         <ThemeProvider theme={defaultTheme}>
             <Grid container component="main" sx={{ height: '100vh' }}>
                 <CssBaseline />
-                <Grid
-                    item
-                    xs={false}
-                    sm={4}
-                    md={7}
+                <Grid item xs={false} sm={4} md={7}
                     sx={{
                         backgroundImage: 'url(https://source.unsplash.com/random?wallpapers)',
                         backgroundRepeat: 'no-repeat',
@@ -83,6 +101,8 @@ function Login() {
                                 label="Email Address"
                                 name="email"
                                 autoComplete="email"
+                                value={username}
+                                onChange={e => setUsername(e.target.value)}
                                 autoFocus
                             />
                             <TextField
@@ -94,6 +114,8 @@ function Login() {
                                 type="password"
                                 id="password"
                                 autoComplete="current-password"
+                                value={password}
+                                onChange={e => setPassword(e.target.value)}
                             />
                             <FormControlLabel
                                 control={<Checkbox value="remember" color="primary" />}
