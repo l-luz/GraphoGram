@@ -13,11 +13,14 @@ router = routers.DefaultRouter()
 router.register(r'diagramas', views.DiagramaView, 'diagrama')
 router.register(r'pastas', views.PastaView, 'pasta')
 router.register(r'usuarios', views.UsuarioView, 'usuario')
+router.register(r'turmas', views.TurmaView, 'turma')
+router.register(r'disciplinas', views.DisciplinaView, 'disciplina')
 
+print(router)
 
 urlpatterns = [
     path('api/', include(router.urls)),
-
+    path('home/', views.HomeView.as_view(), name ='home')
 ]
 
 # urlpatterns = [

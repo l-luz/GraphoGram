@@ -22,9 +22,6 @@ class User(AbstractUser):
 
     fonte = models.CharField(max_length=100, null=True, blank=True)
     tamanho_fonte = models.FloatField(null=True, blank=True)
-    def __str__(self):
-        return self.first_name + ' ' + self.last_name + " - "
-    
     class Meta:
         db_table = "usuario"
 
@@ -52,6 +49,7 @@ class Turma(models.Model):
     id = models.AutoField(primary_key=True)
     # disciplina = models.ForeignKey("Disciplina", db_column="fk_turma_id", on_delete=models.CASCADE)
     disciplina = models.CharField(max_length=20)
+    ano = models.IntegerField()
     periodo = models.IntegerField()
     responsavel = models.ForeignKey("User", db_column="fk_user_id", on_delete=models.CASCADE)
     

@@ -9,7 +9,7 @@ import Login from './paginas/login';
 import Diagrama from './paginas/diagrama';
 import Config from './paginas/config';
 import Biblioteca from './paginas/biblioteca';
-import Turma from './paginas/turma';
+import Turma from './paginas/turma/list';
 import {Home} from './paginas/home';
 import Logout from './paginas/logout';
 

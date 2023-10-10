@@ -1,14 +1,21 @@
 import React, { Component } from 'react';
-import './paginas.css';
-// import axios from "axios";
+import '../paginas.css';
+import axios from "axios";
 import { FiMoreVertical } from "react-icons/fi";
 import { TbPlus } from "react-icons/tb";
 import {
     Stack, Paper, Card, Grid, Link, Button,
     IconButton, Menu, MenuItem, Typography
 } from '@mui/material';
-
-const disciplinaData = [
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import AddTurma from './formTurma';
+// import Modal from '../../components/TodoModal';
+const turmaData = [
     {
         id: 1, turma: '3wA',
         disciplina: {
@@ -16,9 +23,14 @@ const disciplinaData = [
             nome: 'Disciplina 1'
         },
         alunos: [
-            { id: 101, nome: 'Alice' },
-            { id: 102, nome: 'Bob' },
-            { id: 103, nome: 'Carol' },
+            { id: 401, nome: 'Jack Efron' },
+            { id: 402, nome: 'Karen Karente' },
+            { id: 403, nome: 'Liam Reinaldo' },
+
+            { id: 101, nome: 'Alice Mendes ' },
+            { id: 102, nome: 'Bob Silva' },
+            { id: 103, nome: 'Carol Oliveira' },
+
         ]
     },
     {
@@ -28,9 +40,9 @@ const disciplinaData = [
             nome: 'Disciplina 2'
         },
         alunos: [
-            { id: 201, nome: 'David' },
-            { id: 202, nome: 'Eve' },
-            { id: 203, nome: 'Frank' },
+            { id: 201, nome: 'David Martins Mendonça' },
+            { id: 202, nome: 'Eve Pinheiro Leal' },
+            { id: 203, nome: 'Frank Sode Heart' },
         ]
     },
     {
@@ -40,9 +52,9 @@ const disciplinaData = [
             nome: 'Disciplina 3'
         },
         alunos: [
-            { id: 301, nome: 'Grace' },
-            { id: 302, nome: 'Hannah' },
-            { id: 303, nome: 'Isaac' },
+            { id: 301, nome: 'Grace Pascal' },
+            { id: 302, nome: 'Hannah Almeida Pereira' },
+            { id: 303, nome: 'Isaac Newton' },
         ]
     },
     {
@@ -52,16 +64,38 @@ const disciplinaData = [
             nome: 'Disciplina 4'
         },
         alunos: [
-            { id: 401, nome: 'Jack' },
-            { id: 402, nome: 'Karen' },
-            { id: 403, nome: 'Liam' },
+            { id: 401, nome: 'Jack Efron' },
+            { id: 402, nome: 'Karen Karente' },
+            { id: 403, nome: 'Liam Reinaldo' },
         ]
     },
     // ... mais disciplinas
 ];
 
-
-function Alunos({ item }) {
+function ListaAlunos({ alunos }) {
+    return (
+        <TableContainer sx={{ maxHeight: 225 }}>
+            <Table stickyHeader sx={{ minWidth: 100 }} aria-label="sticky table">
+                <TableHead>
+                    <TableRow>
+                        <TableCell align="center">Nome</TableCell>
+                    </TableRow>
+                </TableHead>
+                <TableBody>
+                    {alunos.map((aluno) => (
+                        <TableRow
+                            key={aluno.id}
+                            sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+                        >
+                            <TableCell align="left">{aluno.nome}</TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        </TableContainer>
+    );
+}
+function InstanciaTurma({ item }) {
 
     const ITEM_HEIGHT = 60;
     const [anchorEl, setAnchorEl] = React.useState(null);
@@ -83,12 +117,14 @@ function Alunos({ item }) {
         setAnchorEl(null);
     };
 
+
+
     return (
         <Card
             className="diagram-card"
             elevation={6}
             style={{
-                width: '300px',
+                width: '500px',
                 height: '300px',
                 padding: '0 20px',
                 boxSizing: 'border-box'
@@ -98,7 +134,7 @@ function Alunos({ item }) {
                 <Grid item xs={10}>
                     <br></br>
                     <Typography variant="h5" gutterBottom>
-                        {item.titulo}
+                        {item.turma} {item.disciplina.codigo} {item.disciplina.nome}
                     </Typography>
                 </Grid>
                 <Grid item xs={2}>
@@ -123,7 +159,9 @@ function Alunos({ item }) {
                     boxSizing: 'border-box'
                 }}
             >
-                <Link href={`diagrama/${item.id}`} >
+                <ListaAlunos alunos={item.alunos} />
+
+                {/* <Link href={`diagrama/${item.id}`} >
                     <div
                         style={{
                             width: '250px',
@@ -137,7 +175,7 @@ function Alunos({ item }) {
                     >
                         <img src={item.thumbnail} alt={item.titulo} />
                     </div>
-                </Link>
+                </Link> */}
             </div>
 
             <Menu
@@ -167,15 +205,94 @@ function Alunos({ item }) {
 
 
 class Turma extends Component {
+    constructor(props) {
+        super(props);
+        this.state = {
+            viewCompleted: false,
+            todoList: [],
+            modal: false,
+            activeItem: {
+                turma: "",
+                disciplina: "",
+                ano: "",
+                periodo: "",
+                responsavel: "",
+
+            },
+        };
+    }
+
+
+    componentDidMount() {
+        this.refreshList();
+    }
+
+      refreshList = () => {
+        axios
+          .get("/api/turmas/")
+          .then((res) => this.setState({ todoList: res.data }))
+          .catch((err) => console.log(err));
+      };
+
+      toggle = () => {
+        this.setState({ modal: !this.state.modal });
+      };
+
+    handleSubmit = (item) => {
+        this.toggle();
+
+        if (item.id) {
+          axios
+            .put(`/api/turmas/${item.id}/`, item)
+            .then((res) => this.refreshList());
+          return;
+        }
+        axios
+            .post("/api/turmas/", item)
+            .then((res) => this.refreshList());
+    };
+
+    //   handleDelete = (item) => {
+    //     axios
+    //       .delete(`/api/turmas/${item.id}/`)
+    //       .then((res) => this.refreshList());
+    //   };
+
+    createItem = () => {
+        const item = {
+            turma: "",
+            disciplina: "",
+            ano: "",
+            periodo: "",
+            responsavel: "",
+        };
+
+        this.setState({ activeItem: item, modal: !this.state.modal });
+    };
+
+    editItem = (item) => {
+        this.setState({ activeItem: item, modal: !this.state.modal });
+    };
+
+    //   displayCompleted = (status) => {
+    //     if (status) {
+    //       return this.setState({ viewCompleted: true });
+    //     }
+
+    //     return this.setState({ viewCompleted: false });
+    //   };
+
+
     render() {
         return (
             <div className="Turma" >
                 <Grid container alignItems="center">
                     <Grid item xs={10}>
-                    <h1 style={{ marginleft: '20' }}>Turma</h1>
+                        <h1 style={{ marginleft: '20' }}>Turma</h1>
+
                     </Grid>
                     <Grid item xs={2}>
-                        <Button variant="outlined">
+                        <Button variant="outlined" onClick={this.createItem}>
                             <TbPlus size={20} /> Nova Turma
                         </Button>
                     </Grid>
@@ -183,7 +300,7 @@ class Turma extends Component {
 
                 <hr />
                 <div className="alunos">
-                    <h2 style={{ marginlE: '20' }}>Alunos</h2>
+                    <h2 style={{ marginlE: '20' }}>Turmas</h2>
                     <Stack
                         className="diagram-list"
                         marginTop={5}
@@ -193,12 +310,20 @@ class Turma extends Component {
                         useFlexGap
                         flexWrap="wrap"
                     >
-                        {disciplinaData.map((diagram) => (
-                            <Alunos key={diagram.id} item={diagram} />
+                        {turmaData.map((turma) => (
+                            <InstanciaTurma key={turma.id} item={turma} />
 
                         ))}
                     </Stack>
                 </div>
+                {this.state.modal ? (
+                    <AddTurma
+                        activeItem={this.state.activeItem}
+                        toggle={this.toggle}
+                        onSave={this.handleSubmit}
+                    />
+                ) : null}
+
             </div>
         );
     }
