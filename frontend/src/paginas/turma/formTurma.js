@@ -14,41 +14,38 @@ import Select from '@mui/material/Select';
 import MenuItem from "@mui/material/MenuItem";
 import FormHelperText from "@mui/material/FormHelperText";
 import axios from 'axios';
+import InputFileUpload from "../../components/fileUpload"
+
 
 const AddTurma = (props) => {
     const [activeItem, setActiveItem] = useState(props.activeItem);
     const [modalOpen, setModalOpen] = useState(true);
     const [disciplina, setDisciplina] = useState({ codigo: '', nome: '' });
     const [disciplinaLista, setDisciplinaLista] = useState([]); // Lista de disciplinas
-    const modalRef = createRef(null) ;
+    const modalRef = createRef(null);
 
     const toggleModal = () => {
         setModalOpen(!modalOpen);
     };
-
+    
     const adicionarDisciplina = async (e) => {
         e.preventDefault();
+        axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem("access_token")}`; // salva o token no header das requisições
 
         const novaDisciplina = {
             codigo: disciplina.codigo,
             nome: disciplina.nome,
         };
-        console.log('aquiiiiiiiiiiiiiiiiiiii');
-        console.log('adicionar disciplina');
         try {
-            // Realize a requisição POST para criar uma nova disciplina
-            console.log(novaDisciplina);
-            const response = await axios.post('/api/disciplinas/', novaDisciplina, {
+            const response = await axios.post('/api/disciplinas/', { 
+                novaDisciplina, 
+            }, {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                withCredentials: true,
-            });
-
-            // // Atualize a lista de disciplinas com a nova disciplina criada
-            // setDisciplinaLista([...disciplinaLista, response.data]);
-
-            // Limpe os campos de código e nome da disciplina
+            },
+                {withCredentials: true});
+            
             setDisciplina({ codigo: '', nome: '' });
         } catch (error) {
             console.error('Erro ao adicionar disciplina:', error);
@@ -63,10 +60,13 @@ const AddTurma = (props) => {
         setActiveItem(updatedItem);
     };
 
-    
+
     useEffect(() => {
-        // Recuperação das disciplinas
-        axios.get('/api/disciplinas/')
+        axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem("access_token")}`; // salva o token no header das requisições
+
+        axios.get('/api/disciplinas/', {
+        }, 
+        )
             .then((response) => {
                 setDisciplinaLista(response.data);
             })
@@ -96,13 +96,13 @@ const AddTurma = (props) => {
                                 </MenuItem>
 
                                 {disciplinaLista ?
-                                
-                                disciplinaLista.map((disciplinaItem) => (
-                                    <MenuItem key={disciplinaItem.id} value={disciplinaItem.codigo}>
-                                        {disciplinaItem.codigo}
-                                    </MenuItem>                                    
-                                ))
-                                :
+
+                                    disciplinaLista.map((disciplinaItem) => (
+                                        <MenuItem key={disciplinaItem.id} value={disciplinaItem.codigo}>
+                                            {disciplinaItem.codigo}
+                                        </MenuItem>
+                                    ))
+                                    :
                                     null
                                 }
                             </Select>
@@ -167,6 +167,9 @@ const AddTurma = (props) => {
                             value={activeItem.responsavel}
                             onChange={handleChange}
                         />
+                    </FormGroup>
+                    <FormGroup>
+                    <InputFileUpload />
                     </FormGroup>
                 </Form>
             </ModalBody>

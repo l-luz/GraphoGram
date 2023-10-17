@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import AppBar from '@mui/material/AppBar';
-import Button from '@mui/material/Button';
-// import StarIcon from '@mui/icons-material/StarBorder';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import Link from '@mui/material/Link';
-
 const Navbar = () => {
     const [isAuth, setIsAuth] = useState(false);
     useEffect(() => {
-        if (localStorage.getItem('access_token') !== null) {
+        if (localStorage.getItem('access_token') !== null && localStorage.getItem('access_token') !== "undefined") {
             setIsAuth(true);
+        } else {
+            if (window.location.href !== "http://localhost:3000/login" && window.location.href!=="http://localhost:3000/erro401"){
+                window.location.href = '/erro401'
+            }
         }
     }, [isAuth]);
 
@@ -77,11 +78,11 @@ const Navbar = () => {
                             Company name
                         </Typography>
 
-                        <Button
+                        {/* <Button
                             href="/login"
                             variant="outlined"
                             sx={{ my: 1, mx: 1.5 }}
-                        > Login </Button>
+                        > Login </Button> */}
                     </Toolbar>
 
 

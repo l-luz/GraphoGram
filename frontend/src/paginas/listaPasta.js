@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
+
 import './paginas.css';
-// import axios from "axios";
+import axios from "axios";
 import { FiMoreVertical } from "react-icons/fi";
 import { TbPlus } from "react-icons/tb";
 import {
@@ -9,29 +10,27 @@ import {
 } from '@mui/material';
 
 
-// Teste
-const foldersData = [
-    { id: 1, nome: 'Pasta 1' },
-    { id: 2, nome: 'Pasta 2' },
-    { id: 3, nome: 'Pasta 3' },
-    { id: 4, nome: 'Pasta 4' },
+// // Teste
+// const foldersData = [
+//     { id: 1, nome: 'Pasta 1' },
+//     { id: 2, nome: 'Pasta 2' },
+//     { id: 3, nome: 'Pasta 3' },
+//     { id: 4, nome: 'Pasta 4' },
 
 
-    // ... mais pastas
-];
+//     // ... mais pastas
+// ];
 
-const diagramsData = [
-    { id: 1, titulo: 'Diagrama 1', thumbnail: 'url_da_thumbnail_1.jpg' },
-    { id: 2, titulo: 'Diagrama 2', thumbnail: 'url_da_thumbnail_2.jpg' },
-    // ... mais diagramas
-];
+// const diagramsData = [
+//     { id: 1, titulo: 'Diagrama 1', thumbnail: 'url_da_thumbnail_1.jpg' },
+//     { id: 2, titulo: 'Diagrama 2', thumbnail: 'url_da_thumbnail_2.jpg' },
+//     // ... mais diagramas
+// ];
 
 
 function ItemPasta({ item }) {
     return (
-        // <Link to={`/pasta/${id}`} style={{ textDecoration: 'none' }}>
-
-        <Button href={`pasta/${item.id}`}>
+        <Button href={`/pastas/${item.id}`}>
             <Paper
                 className="folder-list item-list"
                 elevation={6}
@@ -154,9 +153,52 @@ function ItemDiagrama({ item }) {
 
 
 class Biblioteca extends Component {
-
+    constructor(props) {
+        super(props);
+        this.state = {
+            pastas: [],
+            diagramas: [],
+            id: ''
+        };
+    }
     
+    
+    componentDidMount() {
+        const path = window.location.href.split('/');
+        var pageId = Number(path[path.length - 1]);
+        // const {id} = this.state;
+        console.log(pageId, isNaN(pageId));
+        
+        if (isNaN(pageId)) {
+            pageId = '';  
+        }       
+        this.refreshList(pageId);
+    }
+
+
+    refreshList = (id) => {
+        // salva o token no header das requisições
+        // const { id } = this.state;
+
+        console.log(id)
+            
+        axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem("access_token")}`;
+        axios
+            .get(`/api/pastas/${id}`)
+            .then((res) => {
+                this.setState({
+                    pastas: res.data.pastas,
+                    diagramas: res.data.diagramas
+                });
+            })
+            .catch((err) => console.log(err));
+    };
+
+
+        
+
     render() {
+        const { pastas, diagramas } = this.state;
         return (
             <div className="Biblioteca" >
                 <Grid container alignItems="center">
@@ -191,7 +233,7 @@ class Biblioteca extends Component {
                         useFlexGap
                         flexWrap="wrap"
                     >
-                        {foldersData.map((folder) => (
+                        {pastas.map((folder) => (
                             <ItemPasta key={folder.id} item={folder} />
                         ))}
                     </Stack>
@@ -208,7 +250,7 @@ class Biblioteca extends Component {
                         useFlexGap
                         flexWrap="wrap"
                     >
-                        {diagramsData.map((diagram) => (
+                        {diagramas.map((diagram) => (
                             <ItemDiagrama key={diagram.id} item={diagram} />
 
                         ))}
