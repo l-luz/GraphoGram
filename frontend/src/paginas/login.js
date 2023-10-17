@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -36,14 +36,15 @@ function Login() {
     const [password, setPassword] = useState('');
 
     // Create the submit method.
-    const handleSubmit = async e => {
+    const enviarLogin = async e => {
         e.preventDefault();
         const user = {
             username: username,
             password: password
         };
         // Create the POST request
-        const { data } = await
+        try {
+            const { data } = await
             axios.post('/api/login/',
                 user, {
                 headers: {
@@ -53,13 +54,18 @@ function Login() {
             }
             );
 
-        // Initialize the access & refresh token in localstorage.      
-        localStorage.clear();
-        localStorage.setItem('access_token', data.access);
-        localStorage.setItem('refresh_token', data.refresh);
-        axios.defaults.headers.common['Authorization'] =
-            `Bearer ${data['access']}`;
-        window.location.href = '/';
+            // Initialize the access & refresh token in localstorage.      
+            localStorage.clear();
+            localStorage.setItem('access_token', data.access);
+            localStorage.setItem('refresh_token', data.refresh);
+            axios.defaults.headers.common['Authorization'] =
+                `Bearer ${data['access']}`; // salva o token no header das requisições
+
+                window.location.href = '/';
+        } catch {
+            console.error('Erro ao fazer login. Credenciais inválidas.');
+        }
+        
     }
 
     return (
@@ -92,7 +98,7 @@ function Login() {
                         <Typography component="h1" variant="h5">
                             Sign in
                         </Typography>
-                        <Box component="form" noValidate onSubmit={handleSubmit} sx={{ mt: 1 }}>
+                        <Box component="form" noValidate onSubmit={enviarLogin} sx={{ mt: 1 }}>
                             <TextField
                                 margin="normal"
                                 required
