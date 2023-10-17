@@ -9,11 +9,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.authentication import SessionAuthentication, BasicAuthentication
 
 class MyObtainTokenPairView(TokenObtainPairView):
-    permission_classes = (AllowAny,)
+    permission_classes = [AllowAny]
     serializer_class = MyTokenObtainPairSerializer
-
 
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
@@ -21,8 +21,10 @@ class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
 
 class LogoutView(APIView):
-     permission_classes = (IsAuthenticated,)
-     def post(self, request):
+    permission_classes = (AllowAny,)
+    authentication_classes = [SessionAuthentication, BasicAuthentication]
+
+    def post(self, request):
         try:
             refresh_token = request.data["refresh_token"]
             token = RefreshToken(refresh_token)

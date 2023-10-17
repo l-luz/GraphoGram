@@ -11,10 +11,14 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
         token = super(MyTokenObtainPairSerializer, cls).get_token(user)
-
         # Add custom claims
+        token['email'] = user.email
         token['username'] = user.username
+
         return token
+    
+    # def validate(self, attrs):
+        
 
 class RegisterSerializer(serializers.ModelSerializer):
     PAPEL_CHOICES = (

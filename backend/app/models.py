@@ -51,8 +51,9 @@ class Turma(models.Model):
     disciplina = models.CharField(max_length=20)
     ano = models.IntegerField()
     periodo = models.IntegerField()
-    responsavel = models.ForeignKey("User", db_column="fk_user_id", on_delete=models.CASCADE)
-    
+    responsavel = models.ForeignKey("User", related_name="Professor", db_column="fk_user_id", on_delete=models.CASCADE)
+    codigo = models.CharField(max_length=300, default="3wa")
+    alunos = models.ManyToManyField("User", related_name="Alunos", db_column="fk_aluno_id")
     def __str__(self):
         return self.codigo + " - " + self.periodo
 
@@ -63,7 +64,6 @@ class Turma(models.Model):
 
 class Pasta(models.Model):
     id = models.AutoField(primary_key=True)
-    
     nome = models.CharField(max_length=100)
     descendente = models.ForeignKey("self", db_column="fk_pasta_id", on_delete=models.SET_NULL, blank=True, null=True)
     dono = models.ForeignKey("User", db_column="fk_user_id", on_delete=models.CASCADE)
