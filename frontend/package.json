@@ -12,9 +12,12 @@
     "@testing-library/user-event": "^13.5.0",
     "axios": "^0.21.1",
     "bootstrap": "^4.6.0",
+    "cytoscape": "^3.26.0",
+    "cytoscape-dagre": "^2.5.0",
     "http-proxy-middleware": "^2.0.6",
     "react": "^18.2.0",
     "react-bootstrap": "^2.9.0",
+    "react-cytoscapejs": "^2.0.0",
     "react-dom": "^18.2.0",
     "react-icons": "^4.11.0",
     "react-router-dom": "^6.16.0",
@@ -22,6 +25,9 @@
     "reactstrap": "^8.9.0",
     "styled-components": "^6.0.8",
     "web-vitals": "^2.1.4"
+  },
+  "devDependencies": {
+    "@babel/plugin-proposal-private-property-in-object": "^7.14.5"
   },
   "scripts": {
     "start": "react-scripts start",
