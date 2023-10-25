@@ -32,6 +32,9 @@ class ToggleButtons extends Component {
         else if (newAlignment === 'pNode') {
             cy.on('tap', this.adicionarDialogo);
         }
+        else if (newAlignment ==='delEl') {
+            cy.on('tap', this.deletaElemento)
+        }
 
         else if (newAlignment === 'editNodes') {
 
@@ -44,17 +47,15 @@ class ToggleButtons extends Component {
         const { cy, incrementaCountEtapas } = this.props;
         var evtTarget = event.target;
 
-        if (evtTarget === cy) {
-            console.log('tap on background');
-        } else {
+        if (evtTarget !== cy) {
             var nodeId = evtTarget.id();
             console.log('tap on  element' + nodeId);
-
+            
             if (cy.$('#' + nodeId).outdegree() === 0) {
                 const etapas = incrementaCountEtapas();
                 cy.add({
                     group: 'nodes',
-                    data: { id: 'node' + etapas, label: etapas },
+                    data: { id: 'node' + etapas, label: etapas, elements: [] },
                 });
                 cy.add({
                     group: 'edges',
@@ -76,7 +77,7 @@ class ToggleButtons extends Component {
 
                 cy.add({
                     group: 'nodes',
-                    data: { id: 'node' + etapas, label: etapas },
+                    data: { id: 'node' + etapas, label: etapas, elements: [] },
                 }); // novo nó
 
                 cy.add({ // conecta noSelecionado - novoNo 
@@ -89,7 +90,6 @@ class ToggleButtons extends Component {
                     data: { source: 'node' + etapas, target: noVizinho.id() },
                 });
 
-
             }
             cy.layout({
                 name: "dagre",
@@ -99,21 +99,39 @@ class ToggleButtons extends Component {
         }
     }
 
+    // deletaElemento = (event) => {
+    //     const {cy} = this.props;
+    //     const ele = event.target;
+
+    //     if (cy.isNode(ele)){
+    //         if (ele.data("label") !== '?'){
+    //             const vizSaida = cy.$('#' + ele.id()).outgoers(function (ele) {
+    //                 if (ele.data("label") === "?") {
+    //                     return ele.isNode()
+    //                 }}
+    //             );
+    //             const vizEntr = cy.$('#' + ele.id()).incomers(function (ele) {
+    //                 if (ele.data("label") === "?") {
+    //                     return ele.isNode()
+    //                 }}
+    //             );
+
+    //             cy.remove(ele);
+    //         }
+    //     }
+    // }
 
     adicionarDialogo = (event) => {
-        const { cy, incrementaCountPergs } = this.props;
-        const { activeItem } = this.state;
-
+        const { cy } = this.props;
+        
         var evtTarget = event.target;
 
-        if (evtTarget === cy) {
-            console.log('tap on background');
-        } else {
+        if (evtTarget !== cy) {
             var nodeId = evtTarget.id();
 
             const labelNode = cy.$('#' + evtTarget.id()).outgoers(function (ele) {
                 if (ele.data("label") === "?") {
-                    return ele.isNode()
+                    return ele.isNode();
                 }
             })[0];
             if (labelNode) {
@@ -122,30 +140,29 @@ class ToggleButtons extends Component {
 
             var nodeId = evtTarget.id();
 
-            const caminhos = [];
-            const vizinhosData = [];
-            const perguntas = incrementaCountPergs();
+            let caminhos = [];
+            let vizinhosData = [];
 
-            if (evtTarget.data("label") === '?') {
+            if (evtTarget.data("label") === '?') { // pega informação do nó
                 vizinhosData = evtTarget.data("respostas");
-                console.log("?")
+                console.log("?");
                 // respData.push({ texto: data.texto, IDNo: data.IDNo, label: data.label });
                 vizinhosData.forEach(vizinho => {
-                    console.log('lID do nó vizinho: ' + vizinho.id());
+                    console.log('lID do nó vizinho: ' + vizinho.IDNo);
                     const resposta = this.criarResposta(true, vizinho.IDNo, vizinho.label, vizinho.texto);
                     caminhos.push(resposta);
                 });
             }
-            else {
+            else { // verifica adjacentes
                 const vizinhos = cy.$('#' + nodeId).outgoers(function (ele) {
-                    return ele.isNode()
+                    return ele.isNode();
                 });    
-                console.log("normal")
+                console.log("normal");
                 vizinhos.forEach(vizinho => {
                     console.log('nID do nó vizinho: ' + vizinho.id());
                     const resposta = this.criarResposta(vizinho, vizinho.data("id"), vizinho.data("label"), "");
-                    console.log("resp" + vizinho.id(), vizinho.data("id"))
-                    console.log(resposta)
+                    console.log("resp" + vizinho.id(), vizinho.data("id"));
+                    console.log(resposta);
                     caminhos.push(resposta);
                 });
             }
@@ -170,7 +187,7 @@ class ToggleButtons extends Component {
             const noAtual = cy.$(':selected');
             const countPerg = incrementaCountPergs();
             const nextNode = cy.$('#' + noAtual).outgoers(function (ele) {
-                return ele.isNode()
+                return ele.isNode();
             })[0];
             let pergID = 'pergunta' + countPerg;
 
@@ -199,7 +216,7 @@ class ToggleButtons extends Component {
                     //     'shape': 'none',
                     // }
                 });
-                if (nextNode.data("label") !== '?') {
+                if (nextNode.data("label") === '?') {
                     cy.$('#' + noAtual).outgoers(function (ele) { //remover aresta de noSelecionado -> arestaVizinha -> noSeguinte 
 
                         return ele.isEdge();
@@ -210,7 +227,7 @@ class ToggleButtons extends Component {
 
             let soma = 0;
             let etapas = incrementaCountEtapas(soma);
-            console.log(etapas)
+            console.log(etapas);
             // adiciona os novos Nos necessarios e os liga
             activeItem.respostas.forEach(resp => {
                 let respId = resp.IDNo;
@@ -222,17 +239,17 @@ class ToggleButtons extends Component {
                     // texto: "", IDNo:"", label: "", readOnly: false
                     cy.add({
                         group: 'nodes',
-                        data: { id: respId, label: novaEtapa },
+                        data: { id: respId, label: novaEtapa, elements: [] },
                     });
                     soma++;
-
                 }
+
                 cy.add({
                     group: 'edges',
                     data: { source: pergID, target: respId },
                 });
             });
-            // incrementaCountEtapas(soma);
+            incrementaCountEtapas(soma);
             cy.layout({
                 name: "dagre",
                 padding: 24,
@@ -241,7 +258,6 @@ class ToggleButtons extends Component {
             this.setState({ modal: !this.state.modal });
         }
     };
-
 
     criarResposta = (node, nodeId, nodeLabel, nodeTexto) => {
         if (node === undefined) {
@@ -257,7 +273,7 @@ class ToggleButtons extends Component {
             readOnly: !(node === undefined)
         }
         return resposta;
-    }
+    };
 
     criarItem = (preResp) => {
         var respostas = [this.criarResposta()];
@@ -291,7 +307,7 @@ class ToggleButtons extends Component {
         });
 
         this.setState({ NodeOptions: nos, modal: !this.state.modal });
-    }
+    };
 
     render() {
         const { alignment, NodeOptions } = this.state;
@@ -316,7 +332,7 @@ class ToggleButtons extends Component {
                 <ToggleButton value="transNode" aria-label="justified" >
                     <MdNextPlan />
                 </ToggleButton>
-                <ToggleButton value="delNode" aria-label="justified" >
+                <ToggleButton value="delEl" aria-label="Delete Elements">
                     <TiDelete />
                 </ToggleButton>
                 <ToggleButton value="mescNode" aria-label="justified" >
