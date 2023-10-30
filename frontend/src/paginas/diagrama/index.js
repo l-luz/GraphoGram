@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import {Grid, Button} from '@mui/material';
+import { Grid, Button } from '@mui/material';
 import '../paginas.css';
 import CytoscapeComponent from 'react-cytoscapejs';
 import Cytoscape from 'cytoscape';
@@ -7,6 +7,7 @@ import dagre from "cytoscape-dagre";
 import ToggleButtons from "./toogleButtons";
 import { FaArrowLeft, FaArrowRight } from "react-icons/fa"
 import DiagramaManager from './diagrama';
+import ModalInteracao from './modalInteracao';
 
 const GRAPH_WIDTH = 400;
 var initialNode = "node0";
@@ -22,70 +23,78 @@ class Diagrama extends Component {
             countPerg: 0,
             etapaAtual: initialNode,
             excalidrawApi: null,
+            viewMode: false,
+            NodeOptions: [{ obj: true, id: "Novo Nó" }],
+            isDialogoOpen: false,
+            activeItem: {
+                pergunta: '',
+                respostas: [{ texto: "", IDNo: "", label: "", readOnly: false }],
+            },
         };
     }
 
+
     atualizarEtapaAtual = (novoValor) => {
-        const { cy, etapaAtual, excalidrawApi } = this.state;
+        const { cy, etapaAtual, excalidrawApi, viewMode } = this.state;
         const novoValorID = novoValor.id();
-        const elements = excalidrawApi.getSceneElements();
-        
-        cy.$("#" + etapaAtual).data("elements", elements);
-        cy.$("#" + etapaAtual).removeClass("atual");
+        const elements = excalidrawApi.getSceneElements(); // array
+        const noAtual = cy.$("#" + etapaAtual);
+        const transicao = novoValor.incomers(function (ele) {
+            if (ele.data('transicao')) {
+                return ele.isEdge();
+            }
+        }); // edges array
+
+        noAtual.data("elements", elements);
+        noAtual.toggleClass("atual");
 
         this.setState({ etapaAtual: novoValorID });
-        cy.$("#" + novoValorID).addClass("atual");
+        novoValor.toggleClass("atual");
 
-        const sceneData = novoValor.data("elements");
+        var sceneData = novoValor.data("elements");
 
-        const a = {
-            elements: [
-                {
-                    type: "rectangle",
-                    version: 141,
-                    versionNonce: 361174001,
-                    isDeleted: false,
-                    id: "oDVXy8D6rom3H1-LLH2-f",
-                    fillStyle: "hachure",
-                    strokeWidth: 1,
-                    strokeStyle: "solid",
-                    roughness: 1,
-                    opacity: 100,
-                    angle: 0,
-                    x: 100.50390625,
-                    y: 93.67578125,
-                    strokeColor: "#c92a2a",
-                    backgroundColor: "transparent",
-                    width: 186.47265625,
-                    height: 141.9765625,
-                    seed: 1968410350,
-                    groupIds: [],
-                    boundElements: null,
-                    locked: false,
-                    link: null,
-                    updated: 1,
-                    roundness: {
-                        type: 3,
-                        value: 32,
-                    },
-                },
-            ],
-        };
-        // excalidrawApi.updateScene(a);
-        // console.log(a)
-        // const b  = {elements: excalidrawApi.getSceneElements()}
-        // console.log(b)
-        // console.log('att')
-        // console.log(typeof(elements))
-        // console.log(elements )
-        // console.log(typeof(cy.$("#" + etapaAtual).data("elements")))
-        // console.log(cy.$("#" + etapaAtual).data("elements"));
-        // console.log(typeof(sceneData))
-        // console.log(sceneData)
-        if (sceneData.length === 0){
+        if (transicao.length > 0) {
+            const addedIds = {};
+            transicao.forEach((ele) => { // remover duplicatas
+                const sourceElements = cy.$(ele.source()).data("elements");
+                if (sourceElements) {
+                    sceneData.forEach((element) => {
+                        addedIds[element.id] = true;
+                    });
+
+                    sourceElements.forEach((element) => {
+                        if (!addedIds[element.id] && !sceneData[element.id]) {
+                            console.log("ids")
+
+                            console.log(element.id)
+                            console.log(addedIds)
+
+                            sceneData.push(element);
+                            addedIds[element.id] = true;
+                        }
+                    });
+                }
+            });
+        }
+        console.log("el")
+        console.log(elements);
+        console.log('sc')
+        console.log(sceneData);
+
+        const appState = excalidrawApi.getAppState()
+
+        if (viewMode && cy.$("#" + novoValorID).data("label") === '?') {
+            // aplicar modal de interação
+            this.setState({ isDialogoOpen: true });
+        }
+
+        if (sceneData.length === 0) {
             excalidrawApi.resetScene();
         }
-            excalidrawApi.updateScene({elements: sceneData});
+        excalidrawApi.updateScene({ elements: sceneData, appState: appState });
+
+        // excalidrawApi.setToast({ message: "teste", closable:false, duration: Infinity});
+
     };
 
     incrementaCountEtapas = (soma = 1) => {
@@ -93,39 +102,56 @@ class Diagrama extends Component {
         return this.state.countEtapas;
     }
 
-    incrementaCountPergs = () => {
-        this.setState({ countPerg: this.state.countPerg + 1 });
+    incrementaCountPergs = (soma = 1) => {
+        this.setState({ countPerg: this.state.countPerg + soma });
         return this.state.countPerg;
     }
 
     proximoNo = () => {
-        const {etapaAtual, cy} = this.state;
-        const vizinhos = cy.$("#" + etapaAtual).outgoers(function (ele) {
+
+        const { etapaAtual, cy } = this.state;
+        const noAtual = cy.$("#" + etapaAtual);
+        const vizinhos = noAtual.outgoers(function (ele) {
             return ele.isNode();
         });
 
-        if (vizinhos.length != 0){
+        if (vizinhos.length != 0) {
             const proxNo = vizinhos[0];
             this.atualizarEtapaAtual(proxNo);
+        } else {
+            const etapas = this.incrementaCountEtapas();
+            const novoNo = 'node' + etapas;
+            cy.add({
+                group: 'nodes',
+                data: { id: novoNo, label: etapas, elements: [] },
+            });
+
+            cy.add({
+                group: 'edges',
+                data: { source: noAtual.id(), target: novoNo, transicao: false },
+            });
+            cy.layout({
+                name: "dagre",
+                padding: 24,
+                spacingFactor: 1.5
+            }).run();
         }
-        console.log("etapas " + this.state.countEtapas + " " + " perguntas " + this.state.countPerg + "atual " + etapaAtual)
     }
 
-    noAnterior  = () => {
-        const {etapaAtual, cy} = this.state;
+    noAnterior = () => {
+        const { etapaAtual, cy } = this.state;
         const vizinhos = cy.$("#" + etapaAtual).incomers(function (ele) {
             return ele.isNode();
         });
-        
-        if (vizinhos.length != 0){
+
+        if (vizinhos.length != 0) {
             const noAnt = vizinhos[0];
             this.atualizarEtapaAtual(noAnt);
         }
-        console.log("etapas " + this.state.countEtapas + " " + " perguntas " + this.state.countPerg + "atual " + etapaAtual)
     }
 
     componentDidMount() {
-        Cytoscape.use( dagre );
+        Cytoscape.use(dagre);
 
         const cy = Cytoscape({
             container: document.getElementById('cy'),
@@ -145,7 +171,6 @@ class Diagrama extends Component {
                         'color': "#FC7878",
                         'font-weight': 'bold',
                     },
-
                 },
                 {
                     selector: 'edge',
@@ -163,7 +188,16 @@ class Diagrama extends Component {
                         'border-width': 3,
                         'border-color': '#FC7878'
                     }
-                }
+                },
+                {
+                    selector: '.modify',
+                    style: {
+                        'border-width': 3,
+                        'line-color': '#18ffff',
+                        'background-color': '#18ffff',
+                    }
+                },
+
             ],
             layout: {
                 name: "dagre",
@@ -173,28 +207,54 @@ class Diagrama extends Component {
         });
         cy.zoom(0.75);
         this.setState({ cy: cy });
-        
+
         cy.on('select', 'node', (event) => {
             const ele = event.target;
-            if (ele.isNode()){
+            if (ele.isNode()) {
                 this.atualizarEtapaAtual(ele);
             }
         });
     }
 
     setExcalidrawApi = (api) => {
-        this.setState({excalidrawApi: api});
+        this.setState({ excalidrawApi: api });
     }
-    
+
+    toggleViewMode = () => {
+        this.setState({ viewMode: !this.state.viewMode });
+    }
+    getNodeIDs = () => {
+        const { cy } = this.state;
+        const nos = [];
+        nos.push({ obj: true, id: "novoNo", label: "Novo Nó" });
+
+        cy.nodes().forEach(ele => {
+            if (ele.data("label") !== '?') {
+                const no = {
+                    id: ele.data("id"),
+                    obj: ele,
+                    label: ele.data("label")
+                }
+                nos.push(no);
+            }
+        });
+
+        this.setState({ NodeOptions: nos, modal: !this.state.modal });
+    };
+
+
     render() {
-        const { cy, countEtapas, etapaAtual } = this.state;
+        const { cy, viewMode, etapaAtual, NodeOptions } = this.state;
         return (
             <Grid container spacing={1} style={{ height: '85vh' }}>
                 <Grid item xs={3} style={{ display: 'flex', flexDirection: 'column' }}>
                     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                        <ToggleButtons cy={cy}
+                        <ToggleButtons
+                            cy={cy}
                             incrementaCountEtapas={this.incrementaCountEtapas}
                             incrementaCountPergs={this.incrementaCountPergs}
+                            getNodeIDs={this.getNodeIDs}
+                            NodeOptions={NodeOptions}
                         />
                         <CytoscapeComponent
                             id="cy"
@@ -202,14 +262,14 @@ class Diagrama extends Component {
                         />
                     </div>
 
-                    <Grid container spacing={8} style={{justifyContent: 'flex-start', paddingTop: '1rem', marginBottom:'2rem' }}>
+                    <Grid container spacing={8} style={{ justifyContent: 'flex-start', paddingTop: '1rem', marginBottom: '2rem' }}>
                         <Grid item xs={6} >
-                            <Button style={{color:"#00695c"}} onClick={this.noAnterior}>
+                            <Button style={{ color: "#00695c" }} onClick={this.noAnterior}>
                                 <FaArrowLeft size={42} />
                             </Button>
                         </Grid>
                         <Grid item xs={6}>
-                            <Button style={{color:"#00695c"}} onClick={this.proximoNo}>
+                            <Button style={{ color: "#00695c" }} onClick={this.proximoNo}>
                                 <FaArrowRight size={42} />
                             </Button>
                         </Grid>
@@ -233,7 +293,15 @@ class Diagrama extends Component {
                         }}
 
                         className="custom-styles">
-                            <DiagramaManager cy={cy} etapaAtual={etapaAtual} etapas={countEtapas} setExcalidrawApi={this.setExcalidrawApi} />
+                        <DiagramaManager etapaAtual={etapaAtual} viewMode={viewMode} toggleViewMode={this.toggleViewMode} setExcalidrawApi={this.setExcalidrawApi} />
+                        {this.state.isDialogoOpen && (
+                            <ModalInteracao
+                                activeItem={this.state.activeItem}
+                                toggle={this.state.isDialogoOpen}
+                                onSave={this.handleDialogoSubmit}
+                                nodes={NodeOptions}
+                            />
+                        )}
                     </div>
                 </Grid>
             </Grid>
