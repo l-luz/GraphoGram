@@ -1,28 +1,27 @@
 import React, { Component } from 'react';
+import { HiOutlinePlus } from 'react-icons/hi';
+import { FaTrash } from 'react-icons/fa';
 import {
     Modal,
-    ModalHeader,
-    ModalBody,
-    ModalFooter,
-} from 'reactstrap';
-import { HiOutlinePlus } from 'react-icons/hi';
-import {FaTrash} from 'react-icons/fa';
-import {
-    Select,
-    MenuItem,
+    Card,
+    CardHeader,
+    CardContent,
+    CardActions,
     Grid,
     FormGroup,
     FormControl,
     TextField,
     Button,
+    Select,
+    MenuItem,
+} from '@mui/material';
 
-} from "@mui/material"
 
 function InstanciaResposta({ count_resp, resposta, handleChange, IDNos, handleDelete }) {
 
     return (
         <Grid item container xs={12} alignItems="center" spacing={1}>
-        <Grid item xs={6} >
+            <Grid item xs={6} >
                 <FormControl>
                     <TextField
                         multiline
@@ -79,64 +78,68 @@ function InstanciaResposta({ count_resp, resposta, handleChange, IDNos, handleDe
     );
 }
 
+const style = {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    width: 725,
+    bgcolor: 'background.paper',
+    boxShadow: 24,
+    p: 4,
+};
+
 class ModalPergunta extends Component {
     constructor(props) {
         super(props);
         this.state = {
             modalOpen: true,
-            modalRef: null,
             count_resp: 1,
-            erros: {
-                pergunta: false,
-                resposta: false
-            }
+            // erros: {
+            //     pergunta: false,
+            //     resposta: false
+            // }
         };
     }
+
 
     toggleModal = () => {
         this.setState({ modalOpen: !this.state.modalOpen });
     };
 
-    handleChange = (e) => {
-        const { name, value } = e.target;
-        const activeItem = { ...this.props.activeItem, [name]: value };
-        this.setState({ activeItem });
-    };
-
-
     handleAddResposta = () => {
         const activeItem = { ...this.props.activeItem };
-        activeItem.respostas.push({texto: '', IDNo: 'novoNo', label: '', readOnly: false});
+        activeItem.respostas.push({ texto: '', IDNo: 'novoNo', label: '', readOnly: false });
         this.setState({ activeItem, count_resp: this.state.count_resp + 1 });
     };
 
-    handleErrors = () => {
-        const { activeItem } = this.props;
+    // handleErrors = () => {
+    //     const { activeItem } = this.props;
 
-        if (!activeItem.pergunta) {
-            this.setState(prevState => ({
-                activeItem: {
-                    ...prevState.activeItem,
-                    pergunta: true
-                },
-                erros: {
-                    ...prevState.erros,
-                    pergunta: true
-                }
-            }));
-        } else {
-            this.setState(prevState => ({
-                activeItem: {
-                    ...prevState.activeItem,
-                    pergunta: false
-                },
-                erros: {
-                    ...prevState.erros,
-                    pergunta: false
-                }
-            }));
-        }
-    }
+    //     if (!activeItem.pergunta) {
+    //         this.setState(prevState => ({
+    //             activeItem: {
+    //                 ...prevState.activeItem,
+    //                 pergunta: true
+    //             },
+    //             erros: {
+    //                 ...prevState.erros,
+    //                 pergunta: true
+    //             }
+    //         }));
+    //     } else {
+    //         this.setState(prevState => ({
+    //             activeItem: {
+    //                 ...prevState.activeItem,
+    //                 pergunta: false
+    //             },
+    //             erros: {
+    //                 ...prevState.erros,
+    //                 pergunta: false
+    //             }
+    //         }));
+    //     }
+    // }
 
     handleDelete = (id) => {
         const { activeItem } = this.props;
@@ -151,47 +154,46 @@ class ModalPergunta extends Component {
             console.log(this.state.activeItem.respostas);
         });
 
-    };  
+    };
+    
 
     render() {
-        const { modalOpen, modalRef, count_resp } = this.state;
-        const { activeItem, nodes } = this.props;
-
+        const { modalOpen } = this.state;
+        const { activeItem, nodes, setPergunta } = this.props;
         return (
-            <Modal isOpen={modalOpen} toggle={this.toggleModal} innerRef={modalRef}>
-                <ModalHeader toggle={this.toggleModal}> Adicionar Diálogo na Apresentação </ModalHeader>
-                <ModalBody style={{ maxHeight: 'calc(100vh - 210px)', overflowY: 'auto' }}>
-                    <Grid container rowSpacing={3} spacing={1}>
-                        <Grid item xs={12} >
-                            <FormGroup >
-                                <TextField
-                                    multiline
-                                    label="Pergunta"
-                                    type="text"
-                                    id="etapa-pergunta"
-                                    name="pergunta"
-                                    value={this.props.activeItem.pergunta}
-                                    onChange={(e) => {
-                                        const newActiveItem = { ...this.props.activeItem, pergunta: e.target.value };
+            <Modal open={modalOpen} onClose={this.toggleModal}>
+                <Card sx={style} >
+                    <CardHeader title="Adicionar Diálogo na Apresentação" />
+                    <CardContent>
+                        <Grid container rowSpacing={3} spacing={1}>
+                            <Grid item xs={12}>
+                                <FormGroup>
+                                    <TextField
+                                        multiline
+                                        label="Pergunta"
+                                        type="text"
+                                        id="etapa-pergunta"
+                                        name="pergunta"
+                                        defaultValue={ activeItem.pergunta }
+                                        onChange={setPergunta}
+                                        placeholder="Insira a pergunta"
+                                        required
+                                    />
+                                </FormGroup>
+                            </Grid>
+                            {activeItem.respostas.map((resposta, index) => (
+                                <InstanciaResposta
+                                    key={index}
+                                    count_resp={index + 1}
+                                    resposta={resposta}
+                                    IDNos={nodes}
+                                    
+                                    handleChange={(e) => {
+                                        const novaResposta = [...activeItem.respostas];
+                                        novaResposta[index][e.target.name] = e.target.value;
+                                        const newActiveItem = { ...activeItem, respostas: novaResposta };
                                         this.setState({ activeItem: newActiveItem });
                                     }}
-                                    placeholder="Insira a pergunta"
-                                    required
-                                />
-                            </FormGroup>
-                        </Grid>
-                        {activeItem.respostas.map((resposta, index) => (
-                            <InstanciaResposta
-                                key={index}
-                                count_resp={index + 1}
-                                resposta={resposta}
-                                IDNos={nodes}
-                                handleChange={(e) => {
-                                    const novaPergunta = [...activeItem.respostas];
-                                    novaPergunta[index][e.target.name] = e.target.value;
-                                    const newActiveItem = { ...activeItem, respostas: novaPergunta };
-                                    this.setState({ activeItem: newActiveItem });
-                                }}
                                 // handleDelete={() => {
                                 //     const updatedRespostas = activeItem.respostas.filter((resposta, i) => i !== index);
                                 //     const newActiveItem = { ...activeItem, respostas: updatedRespostas };
@@ -200,31 +202,29 @@ class ModalPergunta extends Component {
                                 //     }));
                                 // }}
                                 />
-                        ))}
-
-                    </Grid>
-                </ModalBody>
-                <ModalFooter spacing={2} >
-
-                    <Grid item xs={2} style={{ textAlign: 'right' }}>
-                        <Button onClick={this.handleAddResposta} >
-                            <HiOutlinePlus />
-                        </Button>
-                    </Grid>
-                    <Grid item xs={8}></Grid>
-                    <Grid item xs={2}>
-                        <Button color="success" onClick={() =>
-
-                            this.props.onSave(activeItem)
-                        }>
-                            Save
-                        </Button>
-                    </Grid>
-                </ModalFooter>
-                <div className="modal-overlay" onClick={this.toggleModal}></div>
+                            ))}
+                        </Grid>
+                    </CardContent>
+                    <CardActions>
+                        <Grid container spacing={2}>
+                            <Grid item xs={2} style={{ textAlign: 'right' }}>
+                                <Button onClick={this.handleAddResposta}>
+                                    <HiOutlinePlus />
+                                </Button>
+                            </Grid>
+                            <Grid item xs={8}></Grid>
+                            <Grid item xs={2}>
+                                <Button color="success" onClick={() => this.props.onSave(activeItem)}>
+                                    Save
+                                </Button>
+                            </Grid>
+                        </Grid>
+                    </CardActions>
+                </Card>
             </Modal>
         );
     }
 }
+
 
 export default ModalPergunta;
