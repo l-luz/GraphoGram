@@ -2,7 +2,10 @@ import axios from "axios";
 let refresh = false;
 
 axios.interceptors.response.use(resp => resp, async error => {
-    if (error.response.status === 401){
+    if (error.response.status === 404){
+        window.location.href = '/erro404';
+    }
+    else if (error.response.status === 401){
         if (window.location.href === "http://localhost:3000/login"){
             return;
         }
@@ -13,11 +16,11 @@ axios.interceptors.response.use(resp => resp, async error => {
             window.location.href = '/erro401';
         }
         else if (error.response.status === 401 && !refresh) {
-            console.log("aqui")
+            // console.log("aqui")
             refresh = true;
-            console.log(localStorage.getItem('access_token'))
+            // console.log(localStorage.getItem('access_token'))
 
-            console.log(localStorage.getItem('refresh_token'))
+            // console.log(localStorage.getItem('refresh_token'))
             const response = await
                 axios.post('/api/login/refresh/', {
                     refresh: localStorage.getItem('refresh_token')
@@ -26,7 +29,7 @@ axios.interceptors.response.use(resp => resp, async error => {
                         'Content-Type': 'application/json'
                     }
                 }, { withCredentials: true });
-            console.log(localStorage.getItem('access_token'))
+            // console.log(localStorage.getItem('access_token'))
             if (response.status === 200) {
                 axios.defaults.headers.common['Authorization'] = `Bearer
             ${response.data['access']}`;

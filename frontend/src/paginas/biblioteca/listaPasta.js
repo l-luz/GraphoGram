@@ -9,23 +9,6 @@ import {
 } from '@mui/material';
 import AddPasta from './formPasta';
 
-// // Teste
-// const foldersData = [
-//     { id: 1, nome: 'Pasta 1' },
-//     { id: 2, nome: 'Pasta 2' },
-//     { id: 3, nome: 'Pasta 3' },
-//     { id: 4, nome: 'Pasta 4' },
-
-
-//     // ... mais pastas
-// ];
-
-// const diagramsData = [
-//     { id: 1, titulo: 'Diagrama 1', thumbnail: 'url_da_thumbnail_1.jpg' },
-//     { id: 2, titulo: 'Diagrama 2', thumbnail: 'url_da_thumbnail_2.jpg' },
-//     // ... mais diagramas
-// ];
-
 
 function ItemPasta({ item }) {
     return (
@@ -44,17 +27,25 @@ function ItemPasta({ item }) {
     );
 }
 
-function ItemDiagrama({ item }) {
+function ItemDiagrama({ item, refresh }) {
     const [anchorEl, setAnchorEl] = React.useState(null);
     const open = Boolean(anchorEl);
-
+  
+  
+    const handleDelete = () => {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem("access_token")}`;
+      axios
+          .delete(`/api/diagramas/${item.id}/`)
+          .catch((error) => {
+              console.error('Erro ao deletar diagrama:', error);
+          });
+        //   refresh();
+    };
+  
+      
     const options = [
-        'Phobos',
-        'Pyxis',
-        'Sedna',
-        'Titania',
-        'Triton',
-        'Umbriel',
+        'Apagar',
+        'Descrição',
     ];
 
     const handleClick = (event) => {
@@ -66,22 +57,23 @@ function ItemDiagrama({ item }) {
     };
 
     return (
-        <Card
-            className="diagram-card"
-            elevation={6}
-            style={{
-                width: '300px',
-                height: '300px',
-                padding: '0 20px',
-                boxSizing: 'border-box'
-            }}
-        >
-            <Grid container alignItems="center">
+        <Paper
+        className="folder-list item-list"
+        elevation={6}
+        textalign='center'
+        style={{
+            padding: '0 20px',
+            boxSizing: 'border-box',
+            width: '192px',
+            height: '48px',          
+        }}>
+
+            <Grid container alignItems="center" textalign='center' justify="space-between">
                 <Grid item xs={10}>
                     <br></br>
-                    <Typography variant="h5" gutterBottom>
+                    <Link href={`diagrama/${item.id}`} color="inherit" underline="none">
                         {item.titulo}
-                    </Typography>
+                    </Link>
                 </Grid>
                 <Grid item xs={2}>
                     <IconButton
@@ -97,31 +89,6 @@ function ItemDiagrama({ item }) {
                     </IconButton>
                 </Grid>
             </Grid>
-
-            <div className="diagram-preview"
-                style={{
-                    width: '250px',
-                    height: '200px',
-                    boxSizing: 'border-box'
-                }}
-            >
-                <Link href={`diagrama/${item.id}`} >
-                    <div
-                        style={{
-                            width: '250px',
-                            height: '200px',
-                            boxSizing: 'border-box',
-                            border: '2px solid #53C3B8',
-                            display: 'flex',             // Usar flexbox para centralizar horizontalmente
-                            justifyContent: 'center',    // Centralizar horizontalmente
-                            alignItems: 'center',        // Centralizar verticalmente
-
-                        }}
-                    >
-                        <img src={item.thumbnail} alt={item.titulo} />
-                    </div>
-                </Link>
-            </div>
 
             <Menu
                 id="long-menu"
@@ -139,12 +106,12 @@ function ItemDiagrama({ item }) {
                 {options.map((option) => (
                     <MenuItem
                         key={option}
-                        onClick={handleClose}>
+                        onClick={option === 'Apagar' ? handleDelete : handleClose}>
                         {option}
                     </MenuItem>
                 ))}
             </Menu>
-        </Card>
+        </Paper>
     );
 }
 
@@ -178,7 +145,7 @@ class Biblioteca extends Component {
     componentDidMount() {
         axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem("access_token")}`;
         const path = window.location.href.split('/');
-        var pageId = Number(path[path.length - 1]);
+        let pageId = Number(path[path.length - 1]);
         if (isNaN(pageId)) {
             pageId = '';  
         }       
@@ -259,7 +226,7 @@ class Biblioteca extends Component {
                         flexWrap="wrap"
                     >
                         {pastas.map((folder) => (
-                            <ItemPasta key={folder.id} item={folder} />
+                            <ItemPasta key={folder.id} item={folder} refresh={this.refreshList} />
                         ))}
                     </Stack>
                 </div>
