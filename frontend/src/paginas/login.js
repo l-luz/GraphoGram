@@ -1,17 +1,21 @@
 import React, { useState } from 'react';
-import Avatar from '@mui/material/Avatar';
-import Button from '@mui/material/Button';
-import CssBaseline from '@mui/material/CssBaseline';
-import TextField from '@mui/material/TextField';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import Checkbox from '@mui/material/Checkbox';
-import Link from '@mui/material/Link';
-import Paper from '@mui/material/Paper';
-import Box from '@mui/material/Box';
-import Grid from '@mui/material/Grid';
+import {
+    Alert,
+    Avatar,
+    Button,
+    CssBaseline,
+    TextField,
+    FormControlLabel,
+    Checkbox,
+    Link,
+    Paper,
+    Box,
+    Grid,
+    Typography,
+    createTheme,
+    ThemeProvider
+} from '@mui/material/';
 import { AiOutlineLock } from 'react-icons/ai';
-import Typography from '@mui/material/Typography';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
 import axios from "axios";
 
 function Copyright(props) {
@@ -34,7 +38,7 @@ const defaultTheme = createTheme();
 function Login() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-
+    const [error, setError] = useState(false);
     // Create the submit method.
     const enviarLogin = async e => {
         e.preventDefault();
@@ -62,14 +66,21 @@ function Login() {
                 `Bearer ${data['access']}`; // salva o token no header das requisições
 
                 window.location.href = '/';
+                setError(false);
         } catch {
             console.error('Erro ao fazer login. Credenciais inválidas.');
+            setError(true);
         }
         
     }
 
     return (
         <ThemeProvider theme={defaultTheme}>
+            { error ? (
+            <Alert severity="error" onClose={() => {setError(false)}}>This is an error alert — check it out!</Alert>
+
+            ) : null }
+
             <Grid container component="main" sx={{ height: '100vh' }}>
                 <CssBaseline />
                 <Grid item xs={false} sm={4} md={7}
@@ -123,10 +134,6 @@ function Login() {
                                 value={password}
                                 onChange={e => setPassword(e.target.value)}
                             />
-                            <FormControlLabel
-                                control={<Checkbox value="remember" color="primary" />}
-                                label="Remember me"
-                            />
                             <Button
                                 type="submit"
                                 fullWidth
@@ -136,16 +143,11 @@ function Login() {
                                 Sign In
                             </Button>
                             <Grid container>
-                                <Grid item xs>
+                                {/* <Grid item xs>
                                     <Link href="#" variant="body2">
                                         Forgot password?
                                     </Link>
-                                </Grid>
-                                <Grid item>
-                                    <Link href="#" variant="body2">
-                                        {"Don't have an account? Sign Up"}
-                                    </Link>
-                                </Grid>
+                                </Grid> */}
                             </Grid>
                             <Copyright sx={{ mt: 5 }} />
                         </Box>

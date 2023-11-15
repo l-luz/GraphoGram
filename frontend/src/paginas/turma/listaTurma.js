@@ -195,12 +195,11 @@ class Turma extends Component {
             viewCompleted: false,
             modal: false,
             activeItem: {
-                turma: "",
+                codigo: "",
                 disciplina: "",
                 ano: "",
                 periodo: "",
                 responsavel: "",
-
             },
         };
     }
@@ -250,6 +249,7 @@ class Turma extends Component {
             ano: "",
             periodo: "",
             responsavel: "",
+            codigo: "",
         };
 
         this.setState({ activeItem: item, modal: !this.state.modal });

@@ -132,7 +132,7 @@ const AddTurma = (props) => {
                             type="text"
                             id="turma-turma"
                             name="turma"
-                            value={activeItem.turma}
+                            value={activeItem.codigo}
                             onChange={handleChange}
                             placeholder="Insira a turma"
                         />
