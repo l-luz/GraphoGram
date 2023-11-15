@@ -4,51 +4,23 @@ import { Excalidraw, MainMenu, defaultLang, WelcomeScreen, Footer } from "@excal
 defaultLang.code = "pt-PT";
 
 class DiagramaManager extends Component {
-    constructor(props) {
-        super(props);
-        this.state = {
-            etapaId: 'node0',
-            viewMode: false
-        };
-    }
+  constructor(props) {
+    super(props);
+  }
 
-    
     render() {
-        const {setExcalidrawApi, toggleViewMode, viewMode} = this.props;
+        const {setExcalidrawApi, viewMode} = this.props;
         return (
-            <Excalidraw onChange={this.handleOnChange} viewModeEnabled={viewMode} ref={(api) => {setExcalidrawApi(api)}} 
-            
-            renderTopRightUI={() => {
-                return (
-                  <button
-                    style={{
-                      background: "#70b1ec",
-                      border: "none",
-                      color: "#fff",
-                      width: "max-content",
-                      fontWeight: "bold",
-                    }}
-                    onClick={() => {toggleViewMode() }}
-                  >
-                    Apresentação
-                  </button>
-                );
-              }}
+          <>
+            <Excalidraw 
+                viewModeEnabled={viewMode} 
+                ref={(api) => {setExcalidrawApi(api)}}
             >
-      
-                {/* <MainMenu>
-                    <MainMenu.Item onSelect={() => window.alert("Item1")}>
-                        Item1
-                    </MainMenu.Item>
-                    <MainMenu.Item onSelect={() => window.alert("Item2")}>
-                        Item 2
-                    </MainMenu.Item>
-                </MainMenu> */}
-                <Footer>
-        </Footer>
             </Excalidraw>
+            </>
         );
     };
 }
+
 
 export default DiagramaManager;

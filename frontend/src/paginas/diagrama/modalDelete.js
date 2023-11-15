@@ -6,7 +6,7 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 
-export default function AlertDialog({cy, setDeleteState}) {
+export default function AlertDialog({cy, setDeleteState, proximoNo}) {
     const [open, setOpen] = React.useState(true);
 
     const delElements = () => {
@@ -14,11 +14,12 @@ export default function AlertDialog({cy, setDeleteState}) {
         const selEl = cy.$('.modify');
         if (selEl) {
             cy.remove(selEl);
-            cy.nodes('[label = "?"][outdegree = 0]').remove();
+            //todo att if ?
+            cy.Nodes('[label = "?"][outdegree = 0]').remove();
+            proximoNo(undefined);
         }
         selEl.toggleClass('modify');
         setDeleteState(false);
-
     };
 
     const handleClose = () => {
