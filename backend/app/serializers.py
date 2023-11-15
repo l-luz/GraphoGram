@@ -1,19 +1,15 @@
 from rest_framework import serializers
 from app.models import *
 class SerializadorDiagrama(serializers.ModelSerializer):
-    def validate(self, data):
-        """
-        Verifica dados recebidos
-        """
-        print("Diagrama/n",data)
-
     class Meta:
         model = Diagrama
         fields = "__all__"
+class SerializadorGerencia(serializers.ModelSerializer):
+    class Meta:
+        model = Gerencia
+        fields = "__all__"
 
 class SerializadorPasta(serializers.ModelSerializer):
-    context = {}
-    
     def validate_descendente(self, value):
         print(value)
         if isinstance(value, Pasta):
@@ -30,15 +26,17 @@ class SerializadorPasta(serializers.ModelSerializer):
         fields = "__all__"
 
 class SerializadorUsuario(serializers.ModelSerializer):
-    def validate(self, data):
-        """
-        Verifica dados recebidos
-        """
-        print("Usuario/n",data)
+    # def validate(self, data):
+    #     """
+    #     Verifica dados recebidos
+    #     """
+    #     print("Usuario/n",data)
 
     class Meta:
         model = User
         fields = "__all__"
+
+
 
 class SerializadorDisciplina(serializers.ModelSerializer):
     def validate(self, data):
@@ -61,3 +59,8 @@ class SerializadorTurma(serializers.ModelSerializer):
         model = Turma
         fields = '__all__'
     
+class SerializadorParticipa(serializers.ModelSerializer):
+    turma = SerializadorTurma(many=True)
+    class Meta:
+        model = Participa
+        fields = "__all__"
