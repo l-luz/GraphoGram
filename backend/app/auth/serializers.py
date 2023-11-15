@@ -32,14 +32,14 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
     password2 = serializers.CharField(write_only=True, required=True)
-    papel = serializers.ChoiceField(write_only=True, required=True, choices=PAPEL_CHOICES)
+    tipo = serializers.ChoiceField(write_only=True, required=True, choices=PAPEL_CHOICES)
     class Meta:
         model = User
-        fields = ('papel', 'username', 'email', 'password', 'password2', 'nome', 'matricula')
+        fields = ('tipo', 'username', 'email', 'password', 'password2', 'nome', 'username')
         # extra validations
         extra_kwargs = {
             'nome': {'required': True},
-            'matricula': {'required': True, 'validators': [UniqueValidator(queryset=User.objects.all())]}
+            'username': {'required': True, 'validators': [UniqueValidator(queryset=User.objects.all())]}
         }
 
     def validate(self, attrs):
@@ -53,8 +53,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             username=validated_data['username'],
             email=validated_data['email'],
             nome=validated_data['nome'],
-            matricula=validated_data['matricula'],
-            papel=validated_data['papel'],
+            tipo=validated_data['tipo'],
         )
         user.set_password(validated_data['password'])
         user.save()

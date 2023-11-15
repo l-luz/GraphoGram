@@ -1,6 +1,4 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-
+import {Link} from 'react-router-dom';
 const UnauthorizedPage = () => {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '100px' }}>
@@ -14,4 +12,14 @@ const UnauthorizedPage = () => {
     );
 };
 
-export default UnauthorizedPage;
+const NotFoundPage = () => {
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '100px' }}>
+            <h1>Erro 404: Página não encontrada</h1>
+            <p>A página que você está procurando não existe.</p>
+            <p>Volte para a <Link to="/" style={{ textDecoration: 'underline' }}>página inicial</Link>.</p>
+        </div>
+    );
+};
+
+export {UnauthorizedPage, NotFoundPage};
