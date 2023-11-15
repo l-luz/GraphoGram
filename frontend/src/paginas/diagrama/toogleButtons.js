@@ -2,15 +2,12 @@ import React, { Component } from 'react';
 import {
     ToggleButton,
     ToggleButtonGroup,
-    Tooltip,
-    Avatar,
     Menu,
     MenuItem,
-    Divider,
     Button,
+    Grid
 } from '@mui/material';
 import { RiFileAddFill, RiQuestionnaireFill, RiNodeTree } from 'react-icons/ri';
-import { TiDelete } from 'react-icons/ti';
 import { MdNextPlan } from 'react-icons/md';
 import ModalPergunta from './modalPergunta';
 import AlertDialog from './modalDelete';
@@ -19,79 +16,86 @@ class ToggleButtons extends Component {
     constructor(props) {
         super(props);
         this.state = {
-            modal: false,
-            toggleOpt: null,
+            modalPerg: false,
+            modalDel: false,
+            toggledOpt: null,
+            graphAction: null,
             activeItem: {
                 pergunta: '',
                 respostas: [{ texto: "", IDNo: "", label: "", readOnly: false }],
             },
             menu: [null, null],
-            graphAction: null,
-            deleteEl: false,
-
         };
     }
+
     handleMenuClick = (event, value, index) => {
-        if (this.state.toggleOpt !== value) {
+        if (this.state.toggledOpt !== value) {
             const newMenu = [...this.state.menu];
             newMenu[index] = event.currentTarget;
             this.setState({ menu: newMenu });
         }
     };
+
     handleMenuClose = (index) => {
         const newMenu = [...this.state.menu];
         newMenu[index] = null;
         this.setState({ menu: newMenu });
     };
-    
+
     handleGraphActions = (event, newAlignment) => {
-        const { cy } = this.props;
-        const {graphAction, toggleOpt } = this.state;
+        const { cy, eh } = this.props;
+        const { graphAction, toggledOpt } = this.state;
 
         cy.removeListener('tap');
-        
-        if (toggleOpt === 'transMenu'){
+        eh.disableDrawMode();
+
+        if (toggledOpt === 'transMenu') {
             const selEdges = cy.$('.modify');
             if (graphAction !== null) {
                 selEdges.data('transicao', graphAction === 'acumular'); // booleano
             }
             selEdges.toggleClass('modify')
-        } else if (toggleOpt === 'delEl') {
-            this.setState({deleteEl: true});
+        } else if (toggledOpt === 'delEl') {
+            this.setState({ modalDel: true });
         }
 
         if (newAlignment === 'addNode') {
             cy.on('tap', this.adicionarNo);
         }
-
         else if (newAlignment === 'pNode') {
             cy.on('tap', this.adicionarDialogo);
         }
         else if (newAlignment === 'delEl') {
             cy.on('tap', this.selElements)
+            this.setState({ graphAction: newAlignment });
+            newAlignment = 'editNodes';
         }
         else if (newAlignment === 'acumular' || newAlignment === 'esconder') { // transMenu
-            cy.on('tap', 'edge', (event) => {this.selAresta(event)});
-            this.setState({graphAction: newAlignment});
+            cy.on('tap', 'edge', (event) => { this.selElements(event, "edge") });
+            this.setState({ graphAction: newAlignment });
             newAlignment = 'transMenu';
         }
-        else if (newAlignment === 'editNodes') {
-
+        else if (newAlignment === 'addEdge') {
+            eh.enableDrawMode({
+            });
+            this.setState({ graphAction: newAlignment });
+            newAlignment = 'editNodes';
         }
-        this.setState({ toggleOpt: newAlignment });
+        this.setState({ toggledOpt: newAlignment });
     };
+
 
     adicionarNo = (event) => {
         const { cy, incrementaCountEtapas } = this.props;
-        var evtTarget = event.target;
+        let evtTarget = event.target;
 
         if (evtTarget !== cy) {
-            var nodeId = evtTarget.id();
-            console.log('tap on  element' + nodeId);
+            let nodeId = evtTarget.id();
             const noAtual = cy.$('#' + nodeId);
 
             if (noAtual.outdegree() === 0) {
                 const etapas = incrementaCountEtapas();
+                console.log(etapas)
                 cy.add({
                     group: 'nodes',
                     data: { id: 'node' + etapas, label: etapas, elements: [] },
@@ -106,10 +110,11 @@ class ToggleButtons extends Component {
                     estado final: noSelecionado - novaAresta1 - novoNo - novaAresta2 - noVizinho
                 */
                 const etapas = incrementaCountEtapas();
+                console.log(etapas)
                 const noVizinho = noAtual.outgoers(function (ele) {
                     return ele.isNode()
                 })[0];
-                
+
                 noAtual.outgoers(function (ele) {
                     return ele.isEdge()
                 })[0].remove();
@@ -126,7 +131,7 @@ class ToggleButtons extends Component {
 
                 cy.add({ // novoNo - noVizinho
                     group: 'edges',
-                    data: { source: 'node' + etapas, target: noVizinho.id(),transicao: false },
+                    data: { source: 'node' + etapas, target: noVizinho.id(), transicao: false },
                 });
             }
             cy.layout({
@@ -140,13 +145,11 @@ class ToggleButtons extends Component {
     adicionarDialogo = (event) => {
         const { cy } = this.props;
 
-        var evtTarget = event.target;
-        console.log("dialogo" + evtTarget)
+        let evtTarget = event.target;
         if (evtTarget !== cy) {
-            var nodeId = evtTarget.id();
 
             const labelNode = evtTarget.outgoers(function (ele) {
-                if (ele.data("label") === "?") {
+                if (ele.hasClass("pergunta")) {
                     return ele.isNode();
                 }
             })[0];
@@ -154,15 +157,13 @@ class ToggleButtons extends Component {
                 return;
             }
 
-            var nodeId = evtTarget.id();
-
             let caminhos = [];
             let vizinhosData = [];
             let pergunta = '';
             if (evtTarget.data("label") === '?') { // pega informação do nó
                 vizinhosData = evtTarget.data("respostas");
-                console.log("?");
-                // respData.push({ texto: data.texto, IDNo: data.IDNo, label: data.label });
+                console.log("adicionar nod dialogos")
+                console.log(evtTarget.id())
                 vizinhosData.forEach(vizinho => {
                     const resposta = this.criarResposta(true, vizinho.IDNo, vizinho.label, vizinho.texto);
                     caminhos.push(resposta);
@@ -173,13 +174,13 @@ class ToggleButtons extends Component {
                 const vizinhos = evtTarget.outgoers(function (ele) {
                     return ele.isNode();
                 });
-                console.log("normal");
+                console.log("visinhso")
+                console.log(vizinhos)
+                console.log("-------------")
                 vizinhos.forEach(vizinho => {
-                    console.log('nID do nó vizinho: ' + vizinho.id());
                     const resposta = this.criarResposta(vizinho, vizinho.data("id"), vizinho.data("label"), "");
-                    console.log("resp" + vizinho.id(), vizinho.data("id"));
-                    console.log(resposta);
                     caminhos.push(resposta);
+                    console.log(resposta)
                 });
             }
             this.criarItem(caminhos, pergunta);
@@ -192,14 +193,16 @@ class ToggleButtons extends Component {
         const { activeItem } = this.state;
         const respFiltro = activeItem.respostas.filter(item => item.texto.trim() !== "");
         const respData = [];
-        let countEtapas = incrementaCountEtapas(0);
+
+        let countEtapas = incrementaCountEtapas(0) + 1;
         console.log("dialogo submit")
         console.log(activeItem.pergunta)
         console.log(activeItem.respostas)
+
         respFiltro.forEach(data => {
-            var id = data.IDNo;
-            var label = data.label;
-            var isNew = false;
+            let id = data.IDNo;
+            let label = data.label;
+            let isNew = false;
             if (data.IDNo === "novoNo") {
                 id = "node" + countEtapas;
                 label = countEtapas;
@@ -212,8 +215,10 @@ class ToggleButtons extends Component {
         if (activeItem.pergunta && respData.length > 0) {
             const noAtual = cy.$(':selected');
             let countPerg = incrementaCountPergs(0);
-            const nextNode = cy.$('#' + noAtual).outgoers(function (ele) {
-                return ele.isNode();
+            const nextNode = noAtual.outgoers(function (ele) {
+                if (ele.id() !== noAtual.id()) {
+                    return ele.isNode();
+                }
             })[0];
             let pergID = 'pergunta' + countPerg;
 
@@ -227,10 +232,8 @@ class ToggleButtons extends Component {
                     oldResp.push(resp.IDNo);
                 });
             }
-            console.log("oldResp")
-            console.log(oldResp)
 
-            if (noAtual.outdegree() === 0 || nextNode.data("label") !== '?') { // é preciso criar um nó dialogo
+            if ((noAtual.outdegree() === 0 || nextNode.data("label") !== '?') && oldResp.length === 0) { // é preciso criar um nó dialogo
                 /* 
                     estado inicial1: ... noSelecionado
                     estado final2: noSelecionado -> novaAresta -> noDialogo
@@ -238,6 +241,7 @@ class ToggleButtons extends Component {
                     estado inicial2: ... noSelecionado -> arestaVizinha -> noSeguinte
                     estado final2: noSelecionado -> novaAresta1 -> noDialogo -> novaAresta2 -> no seguinte
                 */
+
                 countPerg = incrementaCountPergs(1);
                 pergID = 'pergunta' + countPerg;
                 cy.add({
@@ -245,19 +249,24 @@ class ToggleButtons extends Component {
                     data: {
                         id: pergID, label: "?", pergunta: activeItem.pergunta, respostas: respData, elements: []
                     },
-                    style: {
-                        'shape': 'round-diamond',
-                    }
+                    classes: "pergunta",
                 });
 
                 cy.add({ // criar noSelecionado -> novaAresta -> noDialogo
                     group: 'edges',
                     data: { source: noAtual.id(), target: pergID },
                 });
-                if (noAtual.outdegree() > 1) {
-                    cy.$('#' + noAtual).outgoers(function (ele) { //remover aresta de noSelecionado -> arestaVizinha -> noSeguinte 
-                        return ele.isEdge();
-                    })[0].remove();
+                console.log("AAaaaa")
+                if (nextNode) {
+                    noAtual.outgoers().connectedEdges().forEach(function (edge) {
+                        const sourceId = edge.source().id();
+                        const targetId = edge.target().id();
+                        console.log(sourceId, targetId, noAtual.id(), nextNode.id())
+                        if (sourceId === noAtual.id() && targetId === nextNode.id()) {
+                            edge.remove();
+                        }
+                    });
+
                 }
             }
 
@@ -267,13 +276,12 @@ class ToggleButtons extends Component {
             // adiciona os novos Nos necessarios e os liga
             respData.forEach(resp => {
                 let respId = resp.IDNo;
-                console.log(respId + " " + resp.label + " " + resp.texto);
 
                 if (resp.novoNo) {
+                    soma++;
                     const novaEtapa = etapas + soma;
-                    console.log(novaEtapa);
-                    console.log("novoNo")
                     respId = 'node' + novaEtapa;
+                    console.log("respId: " + respId)
                     cy.add({
                         group: 'nodes',
                         data: { id: respId, label: novaEtapa, elements: [] },
@@ -282,11 +290,9 @@ class ToggleButtons extends Component {
                         group: 'edges',
                         data: { source: pergID, target: respId },
                     });
-                    soma++;
                 }
                 else {
                     if (!oldResp.includes(respId)) {
-                        console.log("add aresta")
                         cy.add({
                             group: 'edges',
                             data: { source: pergID, target: respId },
@@ -301,46 +307,30 @@ class ToggleButtons extends Component {
                 padding: 24,
                 spacingFactor: 1.5
             }).run();
-            this.setState({ modal: !this.state.modal });
+            this.setState({ modalPerg: !this.state.modalPerg });
         }
     };
 
-    selAresta = (event) => {
+    selElements = (event, type) => {
         const { cy } = this.props;
-        var evtTarget = event.target;
-        console.log("transicao")
+        let evtTarget = event.target;
         if (evtTarget !== cy) { // selecionar com shift para multiplo
-            var edgeId = evtTarget.id();
-            if (cy.$('#' + edgeId).isEdge()) {
+            let edgeId = evtTarget.id();
+            
+            if (type === "edge" && cy.$('#' + edgeId).isEdge()) {
                 cy.$('#' + edgeId).toggleClass('modify')
-                console.log("mudança")
+            }
+            else if (type === "node" && cy.$('#' + edgeId).isNode()) {
+                cy.$('#' + edgeId).toggleClass('modify')
+            }
+            else{
+                cy.$('#' + edgeId).toggleClass('modify')
             }
         }
     }
-
-    selElements = (event) => {
-        const { cy } = this.props;
-        var evtTarget = event.target;
-        console.log("del")
-        if (evtTarget !== cy) { // selecionar com shift para multiplo
-            var edgeId = evtTarget.id();
-                cy.$('#' + edgeId).toggleClass('modify')
-        }
-    }
-    selNos = (event) => {
-        const { cy } = this.props;
-        var evtTarget = event.target;
-        console.log("transicao")
-        if (evtTarget !== cy) { // selecionar com shift para multiplo
-            var edgeId = evtTarget.id();
-            if (cy.$('#' + edgeId).isEdge()) {
-                cy.$('#' + edgeId).toggleClass('modify')
-                console.log("mudança")
-            }
-        }    }
 
     setDeleteState = (state) => {
-        this.setState({deleteEl: state})
+        this.setState({ modalDel: state })
     }
 
     criarResposta = (node, nodeId, nodeLabel, nodeTexto) => {
@@ -359,126 +349,134 @@ class ToggleButtons extends Component {
         return resposta;
     };
 
-    criarItem = (preResp, perg) => {
-        var respostas = [this.criarResposta()];
+    criarItem = (resps, perg) => {
+        let respostas = [this.criarResposta()];
 
-        if (preResp) {
-            respostas = preResp;
+        if (resps) {
+            respostas = resps;
             respostas.push(this.criarResposta());
         }
+        console.log("criar item")
+        console.log(respostas)
         const item = {
             pergunta: perg,
             respostas: respostas
         };
         this.props.getNodeIDs();
-        this.setState({ activeItem: item, modal: !this.state.modal });
+        this.setState({ activeItem: item, modalPerg: !this.state.modalPerg });
     };
 
     setPergunta = (e) => {
-        const {activeItem} = this.state;
-        const newActiveItem = { ... activeItem, pergunta: e.target.value };
-        this.setState({ activeItem: newActiveItem });    
-
+        const { activeItem } = this.state;
+        const newActiveItem = { ...activeItem, pergunta: e.target.value };
+        this.setState({ activeItem: newActiveItem });
     }
+
     render() {
-        const { toggleOpt, menu } = this.state;
+        const { toggledOpt, menu } = this.state;
         const { NodeOptions } = this.props;
         const openTransMenu = Boolean(menu[0]);
         const openEditMenu = Boolean(menu[1]);
         return (
             <>
-                <ToggleButtonGroup
-                    value={toggleOpt}
-                    exclusive
-                    onChange={this.handleGraphActions}
-                    aria-label="text alignment"
-                >
-                    {/* toggles de manipulação do grafo */}
-                     {/* <Tooltip title="Crie um novo canvas"> */}
-                    <ToggleButton value="addNode" aria-label="Adicionar No" >
-                        <RiFileAddFill />
-                    </ToggleButton>
-                    {/* </Tooltip> */}
-                    {/* <Tooltip title="Adicione uma interação"> */}
-                    <ToggleButton value="pNode" aria-label="Adicionar Dialogo" >
-                        <RiQuestionnaireFill />
-                    </ToggleButton>
-                    {/* </Tooltip> */}
-                    <ToggleButton 
-                        value="editNodes" 
-                        aria-label="right aligned"
+                <Grid container>
+                    <Grid item>
+                        <ToggleButtonGroup
+                            value={toggledOpt}
+                            exclusive
+                            onChange={this.handleGraphActions}
+                            aria-label="text alignment"
+                        >
+                            {/* toggles de manipulação do grafo */}
+                            {/* <Tooltip title="Crie um novo canvas"> */}
+                            <ToggleButton value="addNode" aria-label="Adicionar No" >
+                                <RiFileAddFill />
+                            </ToggleButton>
+                            {/* </Tooltip> */}
+                            {/* <Tooltip title="Adicione uma interação"> */}
+                            <ToggleButton value="pNode" aria-label="Adicionar Dialogo" >
+                                <RiQuestionnaireFill />
+                            </ToggleButton>
+                            {/* </Tooltip> */}
+                            <ToggleButton
+                                value="editNodes"
+                                aria-label="right aligned"
 
-                        id="edit-menu"
-                        aria-controls={openEditMenu ? 'edit-menu' : undefined}
-                        aria-haspopup="true"
-                        aria-expanded={openEditMenu ? 'true' : undefined}
-                        onClick={(event) => this.handleMenuClick(event, "editMenu", 1)}
-                    >
-                        <RiNodeTree />
-                    </ToggleButton>
-                    <Menu
-                        id="edit-menu"
-                        anchorEl={menu[1]}
-                        open={openEditMenu}
-                        onClose={() => this.handleMenuClose(1)}
-                        MenuListProps={{
-                            'aria-labelledby': 'edit-menu',
-                        }}
-                    >
-                        <MenuItem value="mesclar" onClick={(event) => this.handleGraphActions(event, "mesclar")}>Mesclar Nós</MenuItem>
-                        <MenuItem value="separar" onClick={(event) => this.handleGraphActions(event, "separar")}>Separar Nós</MenuItem>
-                    </Menu>
+                                id="edit-menu"
+                                aria-controls={openEditMenu ? 'edit-menu' : undefined}
+                                aria-haspopup="true"
+                                aria-expanded={openEditMenu ? 'true' : undefined}
+                                onClick={(event) => this.handleMenuClick(event, "editMenu", 1)}
+                            >
+                                <RiNodeTree />
+                            </ToggleButton>
+                            <Menu
+                                id="edit-menu"
+                                anchorEl={menu[1]}
+                                open={openEditMenu}
+                                onClose={() => this.handleMenuClose(1)}
+                                MenuListProps={{
+                                    'aria-labelledby': 'edit-menu',
+                                }}
+                            >
+                                <MenuItem value="addEdge" onClick={(event) => this.handleGraphActions(event, "addEdge")}>+ Aresta</MenuItem>
+                                <MenuItem value="delEl" onClick={(event) => this.handleGraphActions(event, "delEl")}>Remover</MenuItem>
 
-                    {/* toggle relacionado a ações do diagrama */}
-                    {/* <Tooltip title="Personalize as transições entre etapas"> */}
-                    <ToggleButton
-                        value="transMenu"
-                        aria-label="justified"
-                        id="trans-menu"
-                        aria-controls={openTransMenu ? 'trans-menu' : undefined}
-                        aria-haspopup="true"
-                        aria-expanded={openTransMenu ? 'true' : undefined}
-                        onClick={(event) => this.handleMenuClick(event, "transMenu", 0)}
-                    >
-                        <MdNextPlan />
-                    </ToggleButton>
-                    <Menu
-                        id="trans-menu"
-                        anchorEl={menu[0]}
-                        open={openTransMenu}
-                        onClose={() => this.handleMenuClose( 0)}
-                        MenuListProps={{
-                            'aria-labelledby': 'trans-menu',
-                        }}
-                    >
-                        <MenuItem value="acumular" onClick={(event) => this.handleGraphActions(event, "acumular")}>Acumular</MenuItem>
-                        <MenuItem value="esconder" onClick={(event) => this.handleGraphActions(event, "esconder")}>Esconder</MenuItem>
-                    </Menu>
-                    {/* </Tooltip> */}
-                    {/* <Tooltip title="Remova elementos do grafo"> */}
-                    <ToggleButton value="delEl" aria-label="Delete Elements">
-                        <TiDelete />
-                    </ToggleButton>
-                    {/* </Tooltip> */}
-                    
-                    {this.state.modal ? (
-                        <ModalPergunta
-                            activeItem={this.state.activeItem}
-                            toggle={this.toggle}
-                            onSave={this.handleDialogoSubmit}
-                            nodes={NodeOptions}
-                            setPergunta={this.setPergunta}
-                        />
+                            </Menu>
+
+                            {/* toggle relacionado a ações do diagrama */}
+                            {/* <Tooltip title="Personalize as transições entre etapas"> */}
+                            <ToggleButton
+                                value="transMenu"
+                                aria-label="justified"
+                                id="trans-menu"
+                                aria-controls={openTransMenu ? 'trans-menu' : undefined}
+                                aria-haspopup="true"
+                                aria-expanded={openTransMenu ? 'true' : undefined}
+                                onClick={(event) => this.handleMenuClick(event, "transMenu", 0)}
+                            >
+                                <MdNextPlan />
+                            </ToggleButton>
+                            <Menu
+                                id="trans-menu"
+                                anchorEl={menu[0]}
+                                open={openTransMenu}
+                                onClose={() => this.handleMenuClose(0)}
+                                MenuListProps={{
+                                    'aria-labelledby': 'trans-menu',
+                                }}
+                            >
+                                <MenuItem value="acumular" onClick={(event) => this.handleGraphActions(event, "acumular")}>Acumular</MenuItem>
+                                <MenuItem value="esconder" onClick={(event) => this.handleGraphActions(event, "esconder")}>Esconder</MenuItem>
+                            </Menu>
+                            {/* </Tooltip> */}
+                            {this.state.modalPerg ? (
+                                <ModalPergunta
+                                    activeItem={this.state.activeItem}
+                                    toggle={this.toggle}
+                                    onSave={this.handleDialogoSubmit}
+                                    nodes={NodeOptions}
+                                    setPergunta={this.setPergunta}
+                                />
+                            ) : null}
+
+                            {this.state.modalDel ? (
+                                <AlertDialog
+                                    cy={this.props.cy}
+                                    toggle={this.toggle}
+                                    setDeleteState={this.setDeleteState}
+                                    proximoNo={this.props.proximoNo}
+                                />
+                            ) : null}
+
+                        </ToggleButtonGroup>
+                    </Grid>
+                    {/* <Grid item>
+                {this.newActiveItem ? (
+                        <Button onClick={this.handleGraphActions}>Confirmar</Button>
                     ) : null}
-                    {this.state.deleteEl ? (
-                        <AlertDialog
-                            cy = {this.props.cy}
-                            toggle={this.toggle}
-                            setDeleteState={this.setDeleteState}
-                        />
-                    ) : null}
-
-                </ToggleButtonGroup>
+                </Grid> */}
+                </Grid>
             </>
         );
     }
