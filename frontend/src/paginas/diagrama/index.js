@@ -12,12 +12,13 @@ import edgehandles from 'cytoscape-edgehandles';
 import axios from "axios";
 
 let initialNode = "node1";
+Cytoscape.use(dagre);
+Cytoscape.use(edgehandles);
 
 class Diagrama extends Component {
     constructor(props) {
         super(props);
         this.state = {
-            viewCompleted: false,
             cy: null,
             eh: null,
             excalidrawApi: null,
@@ -27,6 +28,7 @@ class Diagrama extends Component {
             NodeOptions: [{ obj: true, id: "Novo Nó" }],
             isInteracaoOpen: false,
             viewMode: false,
+            presentationMode: false,
             diagramaInfo: {
                 titulo: '',
                 descricao: '',
@@ -34,38 +36,105 @@ class Diagrama extends Component {
             pageID: ""
         };
     }
+    recuperaElementos = (cy) => {
+        const { excalidrawApi } = this.state;
+        const noAtual = cy.$(".atual");
+        excalidrawApi.updateScene({ elements: noAtual.data("elements"), appState: excalidrawApi.getAppState() });
+    }
 
-    atualizarEtapaAtual = (novoValor) => {
-        const { cy, etapaAtual, excalidrawApi, viewMode } = this.state;
+    atualizaEtapaApresentacao  = (novoValor) => {
+        const { cy, etapaAtual, excalidrawApi, viewMode, pageID, presentationMode } = this.state;
         let novoValorID;
-        try { 
+        try {
             novoValorID = novoValor.id();
 
         } catch (e) {
             novoValor = cy.$('#' + novoValor);
             novoValorID = novoValor;
         }
-        console.log(novoValor)
-
-        const elements = excalidrawApi.getSceneElements(); // array
+        
         const noAtual = cy.$("#" + etapaAtual);
-        const transicao = novoValor.incomers(function (ele) { 
+        const transicao = novoValor.incomers(function (ele) {
             // recupera as transições para aplicar os efeitos
             if (ele.data('transicao')) {
                 return ele.isEdge();
             }
         }); // edges array
 
-        // atualiza o no atual
-        noAtual.data("elements", elements);
         noAtual.toggleClass("atual", false);
-
-        this.setState({ etapaAtual: novoValorID });
         novoValor.toggleClass("atual", true);
 
         let sceneData = novoValor.data("elements"); // recupera elementos do novo nó
 
-        if (transicao.length > 0) { 
+        if (transicao.length > 0) { // recupera transições a serem aplicadas
+            const addedIds = {};
+            transicao.forEach((ele) => { // remove duplicatas
+                const sourceElements = cy.$(ele.source()).data("elements");
+                if (sourceElements) {
+                    sceneData.forEach((element) => {
+                        addedIds[element.id] = true;
+                    });
+
+                    sourceElements.forEach((element) => {
+                        if (!addedIds[element.id] && !sceneData[element.id]) {
+                            sceneData.push(element);
+                            addedIds[element.id] = true;
+                        }
+                    });
+                }
+            });
+        }
+
+        const appState = excalidrawApi.getAppState();
+        if (novoValor.data("label") === '?' && (viewMode, presentationMode)) {
+                this.setState({ isInteracaoOpen: !this.state.isInteracaoOpen });
+        }
+
+        if (!sceneData || sceneData.length === 0) {
+            excalidrawApi.resetScene();
+        }
+
+        excalidrawApi.updateScene({ elements: sceneData, appState: appState });
+        excalidrawApi.setToast({ message: "Slide " + novoValor.data("label") , closable: true, duration: Infinity });
+        this.setState({ etapaAtual: novoValorID });
+
+    }
+
+    atualizarEtapaAtual = (novoValor) => {
+        const { cy, etapaAtual, excalidrawApi, viewMode, pageID } = this.state;
+        let novoValorID;
+        try {
+            novoValorID = novoValor.id();
+
+        } catch (e) {
+            novoValor = cy.$('#' + novoValor);
+            novoValorID = novoValor;
+        }
+        
+        if (pageID) {
+            this.recuperaElementos(cy);
+        }
+
+        const elements = excalidrawApi.getSceneElements(); // array
+        const noAtual = cy.$("#" + etapaAtual);
+        console.log("noatual", noAtual.id());
+        console.log("novo val", novoValorID);
+
+        const transicao = novoValor.incomers(function (ele) {
+            // recupera as transições para aplicar os efeitos
+            if (ele.data('transicao')) {
+                return ele.isEdge();
+            }
+        }); // edges array
+        // atualiza o no atual
+
+        noAtual.data("elements", elements);
+        noAtual.toggleClass("atual", false);
+        novoValor.toggleClass("atual", true);
+
+        let sceneData = novoValor.data("elements"); // recupera elementos do novo nó
+
+        if (transicao.length > 0) { // recupera transições a serem aplicadas
             const addedIds = {};
             transicao.forEach((ele) => { // remove duplicatas
                 const sourceElements = cy.$(ele.source()).data("elements");
@@ -91,22 +160,22 @@ class Diagrama extends Component {
 
         const appState = excalidrawApi.getAppState();
         console.log("->>", this.state.isInteracaoOpen);
-
-        var textAux = '';
+        let textAux = '';
         if (novoValor.data("label") === '?') {
             if (viewMode) {
                 this.setState({ isInteracaoOpen: !this.state.isInteracaoOpen });
             }
-            textAux = "\n" + novoValor.data('pergunta');
+            textAux = "\n" + novoValor.data('pergunta').slice(0, 30) + "...";
         }
 
         if (!sceneData || sceneData.length === 0) {
             excalidrawApi.resetScene();
         }
+        cy.fit(novoValor, 100);
         excalidrawApi.updateScene({ elements: sceneData, appState: appState });
+        excalidrawApi.setToast({ message: "Slide " + novoValor.data("label") + textAux, closable: true, duration: Infinity });
+        this.setState({ etapaAtual: novoValorID });
         
-        excalidrawApi.setToast({ message: "Slide " + novoValor.data("label") + textAux, closable:false, duration: Infinity});
-
     };
 
     incrementaCountEtapas = (soma = 1) => {
@@ -120,7 +189,7 @@ class Diagrama extends Component {
     }
 
     proximoNo = (proxNo = null) => {
-        const { etapaAtual, cy, viewMode } = this.state;
+        const { etapaAtual, cy, viewMode, presentationMode } = this.state;
         if (proxNo === undefined) { // caso delete, recupera um nó aleatório
             proxNo = cy.nodes()[0];
             if (!proxNo) {
@@ -130,7 +199,7 @@ class Diagrama extends Component {
 
         if (proxNo !== null) { //  recupera o nó seguinte
             proxNo = cy.$('#' + proxNo);
-        } 
+        }
         else { // cria um novo nó
             const noAtual = cy.$("#" + etapaAtual);
             const vizinhos = noAtual.outgoers(function (ele) {
@@ -159,28 +228,39 @@ class Diagrama extends Component {
                 proxNo = cy.$('#' + novoNo);
             }
         }
-        if (proxNo){
-            this.atualizarEtapaAtual(proxNo);
+        if (proxNo) {
+            if (presentationMode){
+                this.atualizaEtapaApresentacao(proxNo)
+            }
+            else {
+                this.atualizarEtapaAtual(proxNo);
+            }
         }
     }
 
     noAnterior = () => {
-        const { etapaAtual, cy } = this.state;
+        const { etapaAtual, cy,presentationMode } = this.state;
         const vizinhos = cy.$("#" + etapaAtual).incomers(function (ele) {
             return ele.isNode();
         });
 
         if (vizinhos.length !== 0) {
             const noAnt = vizinhos[0];
-            this.atualizarEtapaAtual(noAnt);
+            if (presentationMode) {
+                this.atualizaEtapaApresentacao(noAnt)
+            } else {
+                this.atualizarEtapaAtual(noAnt);
+                
+            }
         }
     }
 
-    setCytoscape = (id) => {
+    setCytoscape = async (id) => {
         const { cy, countEtapas } = this.state;
         let newCy;
 
-        if (cy === null) {
+        if (!cy) {
+            console.log("not cy")
             newCy = Cytoscape({
                 container: document.getElementById('cy'),
                 classes: ['atual', 'modify', 'pergunta'],
@@ -228,8 +308,16 @@ class Diagrama extends Component {
                     }
                 ],
             });
+            newCy.fit(newCy.$(".atual"), 150);
+            newCy.layout({
+                name: "dagre",
+                padding: 24,
+                spacingFactor: 1.5
+            }).run();
+    
         } else {
             newCy = cy;
+            console.log("cyok")
         }
 
         if (id === '') { // modo de edição do diagrama
@@ -238,33 +326,42 @@ class Diagrama extends Component {
                 classes: 'atual',
                 data: { id: initialNode, label: countEtapas, elements: [] },
                 selected: true,
-            },
-            );
+            },);
+
         } else { // recuperar diagrama existente
+            console.log("rec")
             axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem("access_token")}`;
-            axios
+            await axios
                 .get(`/api/diagramas/${id}/`)
                 .then((res) => {
-                    newCy.json(res.data.etapas);
-                    this.setState({ countEtapas: res.data.num_etapas, countPerg: res.data.num_pergs })
+                    console.log("diagrama!")
+                    newCy.json(res.data.etapas );
+                    this.setTitulo(res.data.titulo);
+
+                    this.setState({ 
+                        cy: newCy, 
+                        etapaAtual: newCy.$(".atual").data("id"), 
+                        countEtapas: res.data.num_etapas, 
+                        countPerg: res.data.num_pergs
+                    });
+                    this.recuperaElementos(newCy);
+                    newCy.fit(newCy.$(".atual").closedNeighborhood(), 100);
+
                 }).catch((error) => {
                     console.error('Erro ao recuperar diagrama:', error);
                 });
         }
-        newCy.layout({
-            name: "dagre",
-            padding: 24,
-            spacingFactor: 1.5
-        }).run();
+
 
         this.setState({ cy: newCy });
-
         return newCy;
     }
 
-    componentDidMount() {
-        Cytoscape.use(dagre);
-        Cytoscape.use(edgehandles);
+    async componentDidMount() {
+        while (!this.state.excalidrawApi) {
+            await new Promise(resolve => setTimeout(resolve, 100)); // Aguarde 100 milissegundos antes de verificar novamente
+        }
+
 
         const path = window.location.href.split('/');
         let pageId = Number(path[path.length - 1]);
@@ -274,9 +371,16 @@ class Diagrama extends Component {
 
         this.setState({ pageID: pageId });
 
-        const cy = this.setCytoscape(pageId)
+        const cy = await this.setCytoscape(pageId)
+        if (!this.state.CytoscapeComponent) {
+            await new Promise(resolve => setTimeout(resolve, 100)); // Aguarde 100 milissegundos antes de verificar novamente
+        }
+        console.log("aqui1")
 
-        cy.zoom(0.75);
+        
+        console.log("aqui2")
+        console.log(this.state.cy, this.state.etapaAtual, this.state.countEtapas, this.state.countPerg )
+
         let defaults = {
             canConnect: function (sourceNode, targetNode) {
                 // whether an edge can be created between source and target
@@ -304,35 +408,49 @@ class Diagrama extends Component {
         cy.on('select', 'node', (event) => {
             const ele = event.target;
             if (ele.isNode()) {
+                console.log("select event")
                 this.atualizarEtapaAtual(ele);
             }
         });
+        console.log("aqui3")
     }
 
-    componentDidUpdate(prevProps, prevState) {
-        const { cy, etapaAtual, excalidrawApi } = this.state;
+    // componentDidUpdate(prevProps, prevState) {
+    //     const { cy, etapaAtual, excalidrawApi } = this.state;
 
-        if (cy && !etapaAtual && excalidrawApi) {
-            this.setState({ etapaAtual: initialNode });
-            this.atualizarEtapaAtual(cy.$("#" + initialNode));
-        }
-    }
+    // }
 
     setExcalidrawApi = (api) => {
+        const { cy, etapaAtual, excalidrawApi } = this.state;
         this.setState({ excalidrawApi: api }, () => {
-            // this.atualizarEtapaAtual(initialNode);
+
+            if (cy && !etapaAtual && excalidrawApi) { // 
+                this.setState({ etapaAtual: initialNode });
+                console.log("update")
+                this.atualizarEtapaAtual(cy.$("#" + initialNode));
+            }
         });
+    }
+    togglePresentationMode = () => {
+        if (this.state.viewMode) {
+            document.body.removeEventListener('keydown', this.handleKeyDown);
+        } else {
+            document.body.addEventListener('keydown', this.handleKeyDown);
         }
+        this.setState({ presentationMode: !this.state.presentationMode });
+        console.log(this.state.cy, this.state.etapaAtual, this.state.countEtapas, this.state.countPerg )
+
+    }
 
     toggleViewMode = () => {
-        if (this.state.viewMode ){
+        if (this.state.viewMode) {
             document.body.removeEventListener('keydown', this.handleKeyDown);
         } else {
             document.body.addEventListener('keydown', this.handleKeyDown);
         }
         this.setState({ viewMode: !this.state.viewMode });
     }
-    
+
     toggleInteracao = () => {
         this.setState({ isInteracaoOpen: !this.state.isInteracaoOpen });
     }
@@ -355,17 +473,11 @@ class Diagrama extends Component {
         this.setState({ NodeOptions: nos });
     };
 
-    salvar = () => {
+    salvar = async () => {
         const { cy, excalidrawApi, pageID, countEtapas, countPerg } = this.state;
-        const saveCy = cy;
-
-        // saveCy.$("#" + etapaAtual).toggleClass("atual", false);
-        // saveCy.$("#node0").toggleClass("atual", true);
-        const cyJSON = saveCy.json();
-        const exJson = excalidrawApi.getAppState();
         const content = {
-            etapas: cyJSON,
-            estrutura: exJson,
+            etapas: cy.json(),
+            estrutura: excalidrawApi.getAppState(),
             titulo: this.state.diagramaInfo.titulo || "Novo Diagrama",
             num_etapas: countEtapas,
             num_pergs: countPerg,
@@ -373,24 +485,30 @@ class Diagrama extends Component {
         axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem("access_token")}`;
         console.log(pageID)
         if (pageID === "") {
-            axios.post("/api/diagramas/", content);
+            await axios.post("/api/diagramas/", content);
             console.log("adicionando diagrama");
         } else {
-            axios.put(`/api/diagramas/${pageID}/`, content);
+            await axios.put(`/api/diagramas/${pageID}/`, content);
             console.log("atualizando diagrama");
         }
     }
 
     setTitulo = (e) => {
         const { diagramaInfo } = this.state;
-        const newItem = { ...diagramaInfo, titulo: e.target.value };
+        let newTitulo;
+        try {
+            newTitulo = e.target.value
+        } catch {
+            newTitulo = e;
+        }
+        const newItem = { ...diagramaInfo, titulo: newTitulo };
         this.setState({ diagramaInfo: newItem });
     }
 
 
     handleKeyDown = (event) => {
-        console.log("interacao:",this.state.isInteracaoOpen)
-        if (!this.state.isInteracaoOpen ) {
+        console.log("interacao:", this.state.isInteracaoOpen)
+        if (!this.state.isInteracaoOpen) {
             if (event.key === 'ArrowLeft') {
                 this.noAnterior();
             } else if (event.key === 'ArrowRight') {
@@ -401,110 +519,123 @@ class Diagrama extends Component {
 
 
     render() {
-        const { cy, eh, viewMode, etapaAtual, NodeOptions, diagramaInfo } = this.state;
+        const { cy, eh, viewMode, presentationMode, etapaAtual, NodeOptions, diagramaInfo } = this.state;
         return (
-            <Grid container spacing={1} style={{ height: '85vh' }}>
-                <Grid container spacing={3} >
-                    <Grid item xs={3} >
-                        <ToggleButtons
-                            cy={cy}
-                            eh={eh}
-                            incrementaCountEtapas={this.incrementaCountEtapas}
-                            incrementaCountPergs={this.incrementaCountPergs}
-                            proximoNo={this.proximoNo}
-                            getNodeIDs={this.getNodeIDs}
-                            NodeOptions={NodeOptions}
+            <>
+                {presentationMode ?
+                    <Grid container spacing={1} style={{ height: '85vh' }}>
+                        <DiagramaManager
+                            etapaAtual={etapaAtual} viewMode={viewMode}
+                            setExcalidrawApi={this.setExcalidrawApi}
                         />
+                            <Grid item xs={3}>
+                                <Button variant="outlined"
+                                    onClick={() => { this.togglePresentationMode() }}>
+                                    Sair
+                                </Button>
+                            </Grid>
                     </Grid>
-                    <Grid item xs={3}>
-                        <TextField id="d-titulo"
-                            defaultValue={diagramaInfo.titulo}
-                            onChange={this.setTitulo}
-                            label="Título do Diagrama" variant="outlined"
-                        />
-                    </Grid>
-                    <Grid item xs={3}>
-                        <Button variant="outlined"
-                            onClick={() => { this.toggleViewMode() }}>
-                            Apresentação
-                        </Button>
-                    </Grid>
-                    <Grid item xs={3}>
-                        <Button variant="outlined"
-                            onClick={this.salvar}>
-                            Salvar
-                        </Button>
-                    </Grid>
-                </Grid>
-                <Grid item xs={3}
-                    style={{
-                        display: 'flex',
-                        flexDirection: 'column'
-                    }}>
-                    <div style={{
-                        height: '100%',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        border: '1px solid #179487'
-                    }}
-                    >
-                        <CytoscapeComponent
-                            id="cy"
-                            style={{ flex: 1 }}
-                        />
-                    </div>
+                    :
 
-                    <Grid container spacing={8}
-                        style={{
-                            justifyContent: 'flex-start',
-                            paddingTop: '1rem',
-                            marginBottom: '2rem'
-                        }}
-                    >
-                        <Grid item xs={6} >
-                            <Button style={{ color: "#00695c" }} onClick={() => this.noAnterior()}>
-                                <FaArrowLeft size={42} />
-                            </Button>
-                        </Grid>
-                        <Grid item xs={6}>
-                            <Button style={{ color: "#00695c" }} onClick={() => this.proximoNo()}>
-                                <FaArrowRight size={42} />
-                            </Button>
-                        </Grid>
-                    </Grid>
-                </Grid>
+                    <Grid container spacing={1} style={{ height: '85vh' }}>
+                        <Grid container spacing={1} >
+                            <Grid item xs={3} >
+                                <ToggleButtons
+                                    cy={cy}
+                                    eh={eh}
+                                    incrementaCountEtapas={this.incrementaCountEtapas}
+                                    incrementaCountPergs={this.incrementaCountPergs}
+                                    proximoNo={this.proximoNo}
+                                    getNodeIDs={this.getNodeIDs}
+                                    NodeOptions={NodeOptions}
+                                />
+                            </Grid>
+                            <Grid item xs={3}>
+                                <TextField id="d-titulo"
+                                    value={diagramaInfo.titulo}
+                                    onChange={this.setTitulo}
+                                    label="Título do Diagrama" variant="outlined"
+                                />
+                            </Grid>
+                            <Grid item xs={3}>
+                                <Button variant="outlined"
+                                    onClick={() => { this.togglePresentationMode() }}>
+                                    Apresentar
+                                </Button>
+                            </Grid>
+                            <Grid item xs={2}>
+                                <Button variant="outlined"
+                                    onClick={() => { this.toggleViewMode() }}>
+                                    Preview
+                                </Button>
+                            </Grid>
 
-                <Grid item xs={9} style={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                }}>
-                    <div
-                        style={{
-                            height: '95%',
-                            width: '100%',
-                            border: '1px solid #179487',
+                            <Grid item xs={1}>
+                                <Button variant="outlined"
+                                    onClick={this.salvar}>
+                                    Salvar
+                                </Button>
+                            </Grid>
+                        </Grid>
+                        <Grid item xs={3}
+                            style={{
+                                display: 'flex',
+                                flexDirection: 'column'
+                            }}>
+                            <div style={{
+                                height: '100%',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                border: '1px solid #179487'
+                            }}
+                            >
+                                <CytoscapeComponent
+                                    id="cy"
+                                    style={{ flex: 1 }}
+                                />
+                            </div>
+
+                            <Grid container spacing={8}
+                                style={{
+                                    justifyContent: 'flex-start',
+                                    paddingTop: '1rem',
+                                    marginBottom: '2rem'
+                                }}
+                            >
+                                <Grid item xs={6} >
+                                    <Button style={{ color: "#00695c" }} onClick={() => this.noAnterior()}>
+                                        <FaArrowLeft size={42} />
+                                    </Button>
+                                </Grid>
+                                <Grid item xs={6}>
+                                    <Button style={{ color: "#00695c" }} onClick={() => this.proximoNo()}>
+                                        <FaArrowRight size={42} />
+                                    </Button>
+                                </Grid>
+                            </Grid>
+                        </Grid>
+
+                        <Grid item xs={9} style={{
                             display: 'flex',
-                            alignItems: 'center',
                             justifyContent: 'center',
-                            margin: "0 1rem",
-                        }}
-
-                        className="custom-styles">
-                        <DiagramaManager 
-                            etapaAtual={etapaAtual} viewMode={viewMode} 
-                            setExcalidrawApi={this.setExcalidrawApi} 
-                        />
-                        {this.state.isInteracaoOpen ? (
-                            <ModalInteracao
-                                etapaAtual={cy.$('#' + etapaAtual)}
-                                proximoNo={this.proximoNo} // testar this.atualizarEtapaAtual(proxNo);
-                                interacaoOpen={this.toggleInteracao}
-                                nodes={NodeOptions}
+                        }}>
+                            <DiagramaManager
+                                etapaAtual={etapaAtual} viewMode={viewMode}
+                                setExcalidrawApi={this.setExcalidrawApi}
                             />
-                        ) : null}
-                    </div>
-                </Grid>
-            </Grid>
+                        </Grid>
+                    </Grid>
+                }
+                            {this.state.isInteracaoOpen ? (
+                                <ModalInteracao
+                                    etapaAtual={cy.$('#' + etapaAtual)}
+                                    proximoNo={this.proximoNo} // testar this.atualizarEtapaAtual(proxNo);
+                                    interacaoOpen={this.toggleInteracao}
+                                    nodes={NodeOptions}
+                                />
+                            ) : null}
+
+            </>
         );
     }
 }
