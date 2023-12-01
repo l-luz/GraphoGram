@@ -4,7 +4,7 @@ import string
 import random
 
 
-def log_event(request, event, description=None, user=None):
+def log_event(request, event, description=None, user=None, info=None):
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
     if x_forwarded_for:
         ip = x_forwarded_for.split(',')[0]
@@ -14,7 +14,7 @@ def log_event(request, event, description=None, user=None):
     if user is None and not isinstance(request.user, AnonymousUser):
         user = request.user
 
-    Log(ip=ip, user=user, event=event, description=description).save()
+    Log(ip=ip, user=user, event=event, description=description, info=info).save()
 
 
 # def generate_random_password():
