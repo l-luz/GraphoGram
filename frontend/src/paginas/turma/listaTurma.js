@@ -5,109 +5,18 @@ import { FiMoreVertical } from "react-icons/fi";
 import { TbPlus } from "react-icons/tb";
 import {
     Stack, Card, Grid, Button,
-    IconButton, Menu, MenuItem, Typography
+    IconButton, Menu, MenuItem, Typography, Tooltip
 } from '@mui/material';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
 import AddTurma from './formTurma';
+import FullFeaturedCrudGrid from './tabelaAlunos';
 
-const turmaData = [
-    {
-        id: 1, turma: '3wA',
-        disciplina: {
-            codigo: 'inf1234',
-            nome: 'Disciplina 1'
-        },
-        alunos: [
-            { id: 401, nome: 'Jack Efron' },
-            { id: 402, nome: 'Karen Karente' },
-            { id: 403, nome: 'Liam Reinaldo' },
-
-            { id: 101, nome: 'Alice Mendes ' },
-            { id: 102, nome: 'Bob Silva' },
-            { id: 103, nome: 'Carol Oliveira' },
-
-        ]
-    },
-    {
-        id: 2, turma: '3wB',
-        disciplina: {
-            codigo: 'inf2345',
-            nome: 'Disciplina 2'
-        },
-        alunos: [
-            { id: 201, nome: 'David Martins Mendonça' },
-            { id: 202, nome: 'Eve Pinheiro Leal' },
-            { id: 203, nome: 'Frank Sode Heart' },
-        ]
-    },
-    {
-        id: 3, turma: '3wC',
-        disciplina: {
-            codigo: 'inf3456',
-            nome: 'Disciplina 3'
-        },
-        alunos: [
-            { id: 301, nome: 'Grace Pascal' },
-            { id: 302, nome: 'Hannah Almeida Pereira' },
-            { id: 303, nome: 'Isaac Newton' },
-        ]
-    },
-    {
-        id: 4, turma: '3wE',
-        disciplina: {
-            codigo: 'inf7890',
-            nome: 'Disciplina 4'
-        },
-        alunos: [
-            { id: 401, nome: 'Jack Efron' },
-            { id: 402, nome: 'Karen Karente' },
-            { id: 403, nome: 'Liam Reinaldo' },
-        ]
-    },
-    // ... mais disciplinas
-];
-
-function ListaAlunos({ alunos }) {
-    return (
-        <TableContainer sx={{ maxHeight: 225 }}>
-            <Table stickyHeader sx={{ minWidth: 100 }} aria-label="sticky table">
-                <TableHead>
-                    <TableRow>
-                        <TableCell align="center">Nome</TableCell>
-                    </TableRow>
-                </TableHead>
-                <TableBody>
-                    {alunos.map((aluno) => (
-                        <TableRow
-                            key={aluno.id}
-                            sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-                        >
-                            <TableCell align="left">{aluno.nome}</TableCell>
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
-        </TableContainer>
-    );
-}
-
-
-function InstanciaTurma({ item }) {
+function InstanciaTurma({ turma }) {
     const [anchorEl, setAnchorEl] = React.useState(null);
     const open = Boolean(anchorEl);
 
     const options = [
-        'Phobos',
-        'Pyxis',
-        'Sedna',
-        'Titania',
-        'Triton',
-        'Umbriel',
+        'Excluir Turma',
+        'Permissões',
     ];
     const handleClick = (event) => {
         setAnchorEl(event.currentTarget);
@@ -117,25 +26,25 @@ function InstanciaTurma({ item }) {
         setAnchorEl(null);
     };
 
-
-
     return (
         <Card
             className="diagram-card"
             elevation={6}
             style={{
-                width: '500px',
-                height: '300px',
+                width: '850px',
+                height: '500px',
                 padding: '0 20px',
                 boxSizing: 'border-box'
             }}
         >
-            <Grid container alignItems="center">
+            <Grid container alignItems="center" spacing={2}>
                 <Grid item xs={10}>
                     <br></br>
+                    <Tooltip title={turma.disciplina.nome}>
                     <Typography variant="h5" gutterBottom>
-                        {item.turma} {item.disciplina.codigo} {item.disciplina.nome}
+                        {turma.codigo} | {turma.disciplina.codigo} | {turma.ano}.{turma.periodo}
                     </Typography>
+                    </Tooltip>
                 </Grid>
                 <Grid item xs={2}>
                     <IconButton
@@ -151,17 +60,12 @@ function InstanciaTurma({ item }) {
                     </IconButton>
                 </Grid>
             </Grid>
-
-            <div className="diagram-preview"
-                style={{
-                    width: '250px',
-                    height: '200px',
-                    boxSizing: 'border-box'
-                }}
-            >
-                <ListaAlunos alunos={item.alunos} />
-            </div>
-
+            <Grid item xs={6} >
+                <FullFeaturedCrudGrid turma_id={turma.id}/>
+            </Grid>
+            <Grid item xs={6}>
+                {/* Listar diagramas */}
+            </Grid>
             <Menu
                 id="long-menu"
                 MenuListProps={{
@@ -172,7 +76,7 @@ function InstanciaTurma({ item }) {
                 onClose={handleClose}
                 style={{
                     // maxHeight: ITEM_HEIGHT * 4.5,
-                    width: '20ch',
+                    width: '100ch',
                 }}
             >
                 {options.map((option) => (
@@ -194,27 +98,43 @@ class Turma extends Component {
         this.state = {
             viewCompleted: false,
             modal: false,
-            activeItem: {
-                codigo: "",
+            optDisciplinas: [{
+                id: "", 
+                codigo: "", 
+                nome: ""
+            }],
+            turmas:[{
+                id:"", 
                 disciplina: "",
                 ano: "",
-                periodo: "",
-                responsavel: "",
-            },
+                periodo: "", 
+                responsavel: "", 
+                codigo: ""
+            }],
         };
     }
 
 
     componentDidMount() {
-        this.refreshList();
+        this.recuperaDisciplinas();
+        this.recuperaTurmas();
     }
 
-    refreshList = () => {
+    recuperaDisciplinas = () => {
+        axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem("access_token")}`; // salva o token no header das requisições
+        axios
+            .get("/api/disciplinas/")
+            .then((res) => this.setState({optDisciplinas: res.data}))
+            .catch((err) => console.error('Erro ao recuperar disciplinas:', err));
+    };
+
+
+    recuperaTurmas = () => {
         axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem("access_token")}`; // salva o token no header das requisições
         axios
             .get("/api/turmas/")
-            .then((res) => this.setState({ todoList: res.data }))
-            .catch((err) => console.log(err));
+            .then((res) => this.setState({ turmas: res.data.turmas }))
+            .catch((err) => console.error('Erro ao recuperar turmas: ', err));
     };
 
     toggle = () => {
@@ -224,31 +144,40 @@ class Turma extends Component {
     handleSubmit = (item) => {
         this.toggle();
 
-        if (item.id) {
-            axios
-                .put(`/api/turmas/${item.id}/`, item)
-                .then((res) => this.refreshList());
-            return;
-        }
+        const formData = new FormData();
+        console.log(item.file)
+        formData.append('file', item.file[0]);
+        formData.append('disciplina', item.disciplina);
+        formData.append('ano', item.ano);
+        formData.append('periodo', item.periodo);
+        formData.append('codigo', item.codigo);
+
         axios
-            .post("/api/turmas/", item)
-            .then((res) => this.refreshList());
+        .post("/api/turmas/", formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },    
+        }).then((res) => this.recuperaTurmas());
         console.log("adicionando turma");
+        // if (item.id) {
+        //     axios
+        //         .put(`/api/turmas/${item.id}/`, item)
+        //         .then((res) => this.recuperaTurmas());
+        //     return;
+        // }
     };
 
     //   handleDelete = (item) => {
     //     axios
     //       .delete(`/api/turmas/${item.id}/`)
-    //       .then((res) => this.refreshList());
+    //       .then((res) => this.recuperaTurmas());
     //   };
 
     createItem = () => {
         const item = {
-            turma: "",
             disciplina: "",
             ano: "",
             periodo: "",
-            responsavel: "",
             codigo: "",
         };
 
@@ -259,22 +188,13 @@ class Turma extends Component {
         this.setState({ activeItem: item, modal: !this.state.modal });
     };
 
-    //   displayCompleted = (status) => {
-    //     if (status) {
-    //       return this.setState({ viewCompleted: true });
-    //     }
-
-    //     return this.setState({ viewCompleted: false });
-    //   };
-
-
     render() {
+        const {optDisciplinas, turmas} = this.state;
         return (
             <div className="Turma" >
                 <Grid container alignItems="center">
                     <Grid item xs={10}>
                         <h1 style={{ marginleft: '20' }}>Turma</h1>
-
                     </Grid>
                     <Grid item xs={2}>
                         <Button variant="outlined" onClick={this.createItem}>
@@ -295,9 +215,8 @@ class Turma extends Component {
                         useFlexGap
                         flexWrap="wrap"
                     >
-                        {turmaData.map((turma) => (
-                            <InstanciaTurma key={turma.id} item={turma} />
-
+                        {turmas.map((turma) => (
+                            <InstanciaTurma key={turma.id} turma={turma} />
                         ))}
                     </Stack>
                 </div>
@@ -306,6 +225,7 @@ class Turma extends Component {
                         activeItem={this.state.activeItem}
                         toggle={this.toggle}
                         onSave={this.handleSubmit}
+                        optDisciplinas={optDisciplinas}
                     />
                 ) : null}
 

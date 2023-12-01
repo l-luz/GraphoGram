@@ -1,3 +1,7 @@
+import base64
+import io
+import tempfile
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.shortcuts import render
 from rest_framework import viewsets, status
@@ -8,12 +12,13 @@ from rest_framework.views import APIView
 from django.db import transaction as db_transaction
 from logger.models import LogEvents
 from logger.functions import log_event
+from django.contrib.auth.hashers import make_password
+
 
 from app.serializers import *
 from app.models import *
 from rest_framework.decorators import action
 import pandas as pd
-# Create your views here.
 
 class DiagramaView(viewsets.ModelViewSet):
     serializer_class = SerializadorDiagrama
@@ -59,7 +64,7 @@ class DiagramaView(viewsets.ModelViewSet):
     def update(self, request, pk=None):
         diagrama_objeto = get_object_or_404(Diagrama, pk=pk)
         data_diagrama = request.data
-        print(data_diagrama)
+        # print(data_diagrama)
 
         serializer_diagrama = SerializadorDiagrama(instance=diagrama_objeto, data=data_diagrama, partial=True)
         erros = []
@@ -102,8 +107,6 @@ class PastaView(viewsets.ModelViewSet):
 
         serializador_pasta = SerializadorPasta(pastasfilhas, many=True)
         serializador_diagrama = [{'titulo':d.titulo, 'id':d.id, 'dt_criacao':d.dt_criacao} for d in diagramasfilhos]
-        # print( serializador_diagrama)
-        # TODO: criar um json com os dados a serem mostrados (imagem, titulo, id, dt_criacao)
         log_event(
             request,
             LogEvents.PASTA_ACCESSED,
@@ -117,15 +120,13 @@ class PastaView(viewsets.ModelViewSet):
     def create(self, request):
         usuario = request.user.id
         if request.method == 'POST':
-            data = request.data  # Use request.data em vez de request.data.copy()
-            data["dono"] = usuario  # Adiciona o ID do usuário aos dados
+            data = request.data
+            data["dono"] = usuario
             serializer_pasta = SerializadorPasta(data=data)
-            print(data)
-            # pass
+
             if serializer_pasta.is_valid():
                 serializer_pasta.save()
                 return Response(serializer_pasta.data, status=status.HTTP_201_CREATED)
-            print(serializer_pasta.errors)  # Imprime os erros de validação no console
             return Response(serializer_pasta.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -135,67 +136,101 @@ class TurmaView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
 
-    def create(self, request):
-        data_turma = request.data
-        file = data_turma.pop("alunos_excel")
+    @action(detail=True, methods=['get'])
+    def participantes(self, request, pk=None):
+        if pk is not None:
+            serializador_participantes = SerializadorParticipantesTurma(Participa.objects.filter(turma=pk), many=True)
+            return Response({
+                'participantes': serializador_participantes.data,
+            })
+        else:
+            return Response({'error': 'ID da turma não fornecido.'}, status=status.HTTP_400_BAD_REQUEST)
 
+    def create(self, request):
+        responsavel = request.user
+        data_turma = request.data
+        data_turma["responsavel"] = responsavel.id
+
+        arquivo = request.FILES["file"].read()
+        data_turma.pop('file', None)
         serializer_turma = SerializadorTurma(data=data_turma)
-        erros = []
+
+        lista_alunos = pd.read_excel(arquivo, engine="openpyxl", header=8, usecols=["Matrícula", "Nome"])
+        lista_alunos['Nome'] = lista_alunos['Nome'].astype(str).str.replace(r'\n[a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s]+', '', regex=True)
+        lista_alunos['Nome'] = lista_alunos['Nome'].astype(str).str.replace(r'\n+', '', regex=True)
+        lista_alunos['Nome'] = lista_alunos['Nome'].str.strip().apply(lambda x: x.title())
+        lista_alunos = lista_alunos.rename(columns={'Nome': 'nome', 'Matrícula': 'username'})
+        alunos = lista_alunos.to_dict("records")
+
         try:
             with db_transaction.atomic():
-                lista_alunos = pd.read_excel("exemplo_lista_alunos.XLSX", header=8)
-                lista_alunos = lista_alunos.loc[:, ['Matrícula', 'Nome']] 
-                lista_alunos['Nome'] = lista_alunos['Nome'].astype(str).str.replace(r'\n[a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s]+', '', regex=True)
-
                 if serializer_turma.is_valid():
                     serializer_turma.save()
-                    log_event(
-                            request,
-                            LogEvents.DIAGRAMA_CHANGED,
-                            user=request.user
-                        )
-                    for linha in lista_alunos:
-                        data_aluno = {
-                            "tipo": "aluno",
-                            "username": linha.matricula,
-                            "nome": linha.nome,
-                        }
-                        serializer_aluno = SerializadorUsuario(data=data_aluno)
-                        data_participa = {
-                            "turma": serializer_turma.data["id"],
-                            "aluno":serializer_aluno.data["id"]
-                        }
-                        serializer_participa = SerializadorParticipa(data=data_participa)
+                    for data_aluno in alunos:
+                        data_participa = {}
+                        data_participa["turma"] = serializer_turma.data["id"]
+                        try:
+                            aluno_banco = User.objects.get(username=data_aluno["username"])
+                            data_participa["aluno"] = aluno_banco.id
+                        except User.DoesNotExist:
+                            data_aluno["tipo"] = "aluno"
+                            data_aluno["password"] = make_password("aluno1234")
+                            serializer_aluno = SerializadorUsuario(data=data_aluno)
+                            if serializer_aluno.is_valid():
+                                serializer_aluno.save()
+                                data_participa["aluno"] = serializer_aluno.data["id"]
+                                log_event(
+                                    request,
+                                    LogEvents.ALUNO_CREATED,
+                                    user=responsavel,
+                                    info={
+                                        "aluno_id": serializer_aluno.data["id"]
+                                    }
+                                )
+                            else:
+                                raise Exception("Aluno inválido", serializer_aluno.errors)
 
-                        if (serializer_aluno.is_valid() and serializer_participa.is_valid() and serializer_turma.is_valid()):
-                            serializer_aluno.save()
+                        serializer_participa = SerializadorParticipantesTurma(data=data_participa)
+                        if serializer_participa.is_valid():
                             serializer_participa.save()
-                            serializer_turma.save()
-                            return Response(serializer_turma.data, status=status.HTTP_200_OK)
+                        else:
+                            raise Exception("Participa inválido", serializer_participa.errors)
+
+                        
+                        log_event(
+                            request,
+                            LogEvents.ALUNO_ADDED,
+                            user=responsavel,
+                            info={
+                                "participa_id": serializer_participa.data["id"]
+                            }
+                        )
+                    log_event(
+                        request,
+                        LogEvents.TURMA_CREATED,
+                        user=responsavel,
+                        info={
+                            "turma_id": serializer_turma.data["id"]
+                        }
+                    )
+                    return Response(serializer_turma.data, status=status.HTTP_200_OK)
                 else:
-                    erros.append(serializer_turma.errors)
-                    raise Exception()
+                    raise Exception("Turma inválida", serializer_turma.errors)
         except Exception as e:
             print("Erro:", str(e))
-            return Response(erros, status=status.HTTP_400_BAD_REQUEST)
+            return Response(e, status=status.HTTP_400_BAD_REQUEST)
 
- 
     def list(self, request):
         """
-            Lista as pastas do usuário de acordo com o nível
+            Retorna as turmas do usuário
         """
         
         usuario = request.user.id
 
-        turmas = Turma.objects.filter(responsavel=usuario)
-        participa = Participa.objects.filter(turma__in=turmas).prefetch_related("turma")
-
-        serialiador_participa = SerializadorParticipa(participa, many=True)
-        print( serialiador_participa)
-        # TODO: criar um json com os dados a serem mostrados (imagem, titulo, id, dt_criacao)
-
+        turmas = Turma.objects.filter(responsavel=usuario).select_related("disciplina")
+        serializador_turma = SerializadorTurma(turmas, many=True)
         return Response({
-            'turmas': serialiador_participa.data,
+            'turmas': serializador_turma.data,
         })
 
 class DisciplinaView(viewsets.ModelViewSet):
@@ -204,20 +239,94 @@ class DisciplinaView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
 
-    def get(request, format=None):
-        queryset = Disciplina.objects.all()
-        serializer = SerializadorDisciplina(queryset, many=True)
 
-        return Response(serializer)
+class ParticipaView(viewsets.ModelViewSet):
+    serializer_class = SerializadorParticipa()
+    queryset = Participa.objects.all()
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+
+    @action(detail=False, methods=["post"])
+    def create_aluno(self, request):
+        if request.method == 'POST':
+            data_participa = {}
+            data_participa["turma"] = request.data.pop("turma_id")
+            data_aluno = request.data['aluno']
+            data_aluno.pop('id', None)
+            data_aluno.pop('isNew', None)
+            data_aluno["tipo"] = "aluno"
+            data_aluno["password"] = make_password("aluno1234")
+
+            serializer_aluno = SerializadorUsuario(data=data_aluno)
+
+            try:
+                with db_transaction.atomic():
+
+                    try: 
+                        aluno_banco = User.objects.get(username=data_aluno["username"])
+                        data_participa["aluno"] = aluno_banco.id
+                    except User.DoesNotExist:
+                        if serializer_aluno.is_valid():
+                            serializer_aluno.save()
+                            data_participa["aluno"] = serializer_aluno.data["id"]
+                            log_event(
+                                request,
+                                LogEvents.ALUNO_CREATED,
+                                user=request.user,
+                                info={
+                                    "aluno_id": serializer_aluno.data["id"]
+                                }
+                            )
+                        else:
+                            raise Exception("Erro ao salvar o aluno.")
+
+                    serializer_participa = SerializadorParticipa(data=data_participa)
+                    try:
+                        if serializer_participa.is_valid():
+                            serializer_participa.save()
+                        else:
+                            print("erro ao salvar participante")
+                            print(serializer_participa.errors)
+                            raise Exception(serializer_participa.errors)
+                    except Exception as e:
+                        print(e)
+                        raise Exception(e)
+
+                    log_event(
+                        request,
+                        LogEvents.ALUNO_ADDED,
+                        user=request.user,
+                        info={
+                            "participa_id": serializer_participa.data["id"]
+                        }
+                    )
+                    return Response(serializer_participa.data, status=status.HTTP_200_OK)
+            except Exception as e:
+                return Response(str(e), status=status.HTTP_400_BAD_REQUEST)
+
 
 class UsuarioView(viewsets.ModelViewSet):
     serializer_class = SerializadorUsuario
     queryset = User.objects.all()
-    permission_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
 
-class HomeView(APIView):
-    permission_classes = [JWTAuthentication]
-    def get(self, request):
-        content = {'message': 'Welcome to the JWT Authentication page using React Js and Django!'}
-        return Response(content)
+
+    @action(detail=True, methods=['put'])
+    def update_participante(self, request, pk=None):
+        data_aluno = request.data["aluno"]
+        data_aluno["id"] = data_aluno.pop("aluno_id")
+
+        try:
+            aluno = User.objects.get(id=data_aluno["id"])
+        except User.DoesNotExist:
+            print({"error": "Aluno não encontrado"})
+            return Response({"error": "Aluno não encontrado"}, status=status.HTTP_404_NOT_FOUND)
+        serializer_aluno = SerializadorUsuario(aluno, data=data_aluno, partial=True)
+        if serializer_aluno.is_valid():
+            serializer_aluno.save()
+            return Response(serializer_aluno.data, status=status.HTTP_200_OK)
+        print(serializer_aluno)
+        print(serializer_aluno.errors)
+        return Response(serializer_aluno.errors, status=status.HTTP_400_BAD_REQUEST)
 

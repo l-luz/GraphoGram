@@ -1,5 +1,8 @@
+import pandas as pd
 from rest_framework import serializers
 from app.models import *
+
+
 class SerializadorDiagrama(serializers.ModelSerializer):
     class Meta:
         model = Diagrama
@@ -11,7 +14,6 @@ class SerializadorGerencia(serializers.ModelSerializer):
 
 class SerializadorPasta(serializers.ModelSerializer):
     def validate_descendente(self, value):
-        print(value)
         if isinstance(value, Pasta):
             return value
         if value == None or value == "":
@@ -26,16 +28,9 @@ class SerializadorPasta(serializers.ModelSerializer):
         fields = "__all__"
 
 class SerializadorUsuario(serializers.ModelSerializer):
-    # def validate(self, data):
-    #     """
-    #     Verifica dados recebidos
-    #     """
-    #     print("Usuario/n",data)
-
     class Meta:
         model = User
         fields = "__all__"
-
 
 
 class SerializadorDisciplina(serializers.ModelSerializer):
@@ -50,17 +45,27 @@ class SerializadorDisciplina(serializers.ModelSerializer):
         fields = '__all__'
 
 class SerializadorTurma(serializers.ModelSerializer):
-    def validate(self, data):
-        """
-        Verifica dados recebidos
-        """
-        print("Turma/n",data)
+    disciplina = SerializadorDisciplina()
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['disciplina'] = SerializadorDisciplina(instance.disciplina).data
+        return representation
+
     class Meta:
         model = Turma
-        fields = '__all__'
-    
+        fields = "__all__"
+
+
+class SerializadorParticipantesTurma(serializers.ModelSerializer):
+    aluno_id = serializers.ReadOnlyField(source='aluno.id')
+    nome = serializers.ReadOnlyField(source='aluno.nome')
+    username = serializers.ReadOnlyField(source='aluno.username')
+    class Meta:
+        model = Participa
+        fields = ['id', 'aluno_id', 'nome', 'username']
+
+
 class SerializadorParticipa(serializers.ModelSerializer):
-    turma = SerializadorTurma(many=True)
     class Meta:
         model = Participa
         fields = "__all__"

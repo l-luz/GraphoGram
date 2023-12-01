@@ -14,11 +14,19 @@ const VisuallyHiddenInput = styled('input')({
   width: 1,
 });
 
-export default function InputFileUpload() {
+export default function InputFileUpload({ onFileContentChange }) {
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+
+    if (file) {
+      onFileContentChange(event.target.files)
+    }
+  };
+
   return (
-    <Button component="label" variant="contained" >
+    <Button component="label" variant="contained">
       Upload file
-      <VisuallyHiddenInput type="file" />
+      <VisuallyHiddenInput type="file" id="file" name="file"  onChange={handleFileChange} />
     </Button>
   );
 }
