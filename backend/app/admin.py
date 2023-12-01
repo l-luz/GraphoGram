@@ -11,7 +11,7 @@ class PastaAdmin(admin.ModelAdmin):
 class DiagramaAdmin(admin.ModelAdmin):
     list_display = ('titulo', 'pasta', 'dt_criacao')
 class GerenciaAdmin(admin.ModelAdmin):
-    list_display = ('diagrama', 'criador', 'dt_alteracao')
+    list_display = ('diagrama', 'criador')
 
 class DisciplinaAdmin(admin.ModelAdmin):
     list_display = ('nome', 'nome')
