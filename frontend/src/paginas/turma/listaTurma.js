@@ -12,6 +12,7 @@ import FullFeaturedCrudGrid from './tabelaAlunos';
 
 function InstanciaTurma({ turma }) {
     const [anchorEl, setAnchorEl] = React.useState(null);
+    const [mostrar, setMostrar] = React.useState(true);
     const open = Boolean(anchorEl);
 
     const options = [
@@ -26,7 +27,21 @@ function InstanciaTurma({ turma }) {
         setAnchorEl(null);
     };
 
-    return (
+    const handleOption = (option) => {
+        console.log(option)
+        if (option ==="Excluir Turma"){
+            axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem("access_token")}`;
+            axios
+            .delete(`/api/turmas/${turma.id}/`)
+            .catch((err) => console.error("Erro ao deletar Turma" ,err));
+            setMostrar(false);
+        }else if (option ==="Permissões"){
+            console.log("perm");
+        }
+        handleClose()
+    }
+
+    return mostrar ? (
         <Card
             className="diagram-card"
             elevation={6}
@@ -82,13 +97,13 @@ function InstanciaTurma({ turma }) {
                 {options.map((option) => (
                     <MenuItem
                         key={option}
-                        onClick={handleClose}>
+                        onClick={() => {handleOption(option)}}>
                         {option}
                     </MenuItem>
                 ))}
             </Menu>
         </Card>
-    );
+    ) : null;
 }
 
 
@@ -143,35 +158,25 @@ class Turma extends Component {
 
     handleSubmit = (item) => {
         this.toggle();
-
-        const formData = new FormData();
-        console.log(item.file)
-        formData.append('file', item.file[0]);
-        formData.append('disciplina', item.disciplina);
-        formData.append('ano', item.ano);
-        formData.append('periodo', item.periodo);
-        formData.append('codigo', item.codigo);
-
-        axios
-        .post("/api/turmas/", formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            },    
-        }).then((res) => this.recuperaTurmas());
-        console.log("adicionando turma");
-        // if (item.id) {
-        //     axios
-        //         .put(`/api/turmas/${item.id}/`, item)
-        //         .then((res) => this.recuperaTurmas());
-        //     return;
-        // }
+        if (item.file){
+            const formData = new FormData();
+            formData.append('file', item.file[0]);
+            formData.append('disciplina', item.disciplina);
+            formData.append('ano', item.ano);
+            formData.append('periodo', item.periodo);
+            formData.append('codigo', item.codigo);
+            if (item.file[0].name != null){
+                axios
+                .post("/api/turmas/", formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                    },    
+                }).then((res) => this.recuperaTurmas());
+                console.log("adicionando turma");    
+            }    
+        }
     };
 
-    //   handleDelete = (item) => {
-    //     axios
-    //       .delete(`/api/turmas/${item.id}/`)
-    //       .then((res) => this.recuperaTurmas());
-    //   };
 
     createItem = () => {
         const item = {

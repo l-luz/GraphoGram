@@ -34,23 +34,21 @@ class SerializadorUsuario(serializers.ModelSerializer):
 
 
 class SerializadorDisciplina(serializers.ModelSerializer):
-    def validate(self, data):
-        """
-        Verifica dados recebidos
-        """
-        print("Disciplina/n",data)
-
     class Meta:
         model = Disciplina
         fields = '__all__'
 
 class SerializadorTurma(serializers.ModelSerializer):
-    disciplina = SerializadorDisciplina()
     def to_representation(self, instance):
         representation = super().to_representation(instance)
         representation['disciplina'] = SerializadorDisciplina(instance.disciplina).data
         return representation
 
+    def to_internal_value(self, data):
+        if self.context["post"]:
+            print(type(data), type(data["disciplina"]))
+            data["disciplina"] = int(data["disciplina"])
+        return super().to_internal_value(data)
     class Meta:
         model = Turma
         fields = "__all__"

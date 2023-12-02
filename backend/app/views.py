@@ -153,7 +153,7 @@ class TurmaView(viewsets.ModelViewSet):
 
         arquivo = request.FILES["file"].read()
         data_turma.pop('file', None)
-        serializer_turma = SerializadorTurma(data=data_turma)
+        serializer_turma = SerializadorTurma(data=data_turma, context={"post": True})
 
         lista_alunos = pd.read_excel(arquivo, engine="openpyxl", header=8, usecols=["Matrícula", "Nome"])
         lista_alunos['Nome'] = lista_alunos['Nome'].astype(str).str.replace(r'\n[a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s]+', '', regex=True)
@@ -190,7 +190,7 @@ class TurmaView(viewsets.ModelViewSet):
                             else:
                                 raise Exception("Aluno inválido", serializer_aluno.errors)
 
-                        serializer_participa = SerializadorParticipantesTurma(data=data_participa)
+                        serializer_participa = SerializadorParticipa(data=data_participa)
                         if serializer_participa.is_valid():
                             serializer_participa.save()
                         else:
