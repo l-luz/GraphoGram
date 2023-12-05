@@ -1,48 +1,72 @@
-import React, { Component } from 'react';
+import React, { Component, useState } from 'react';
 import '../paginas.css';
 import axios from "axios";
-import { FiMoreVertical } from "react-icons/fi";
+import { FiMoreVertical, FiTrash2 } from "react-icons/fi";
 import { TbPlus } from "react-icons/tb";
 import {
-    Stack, Paper, Card, Grid, Link, Button,
-    IconButton, Menu, MenuItem, Typography
+    Stack, Paper, Grid, Link, Button,
+    IconButton, Menu, MenuItem,
 } from '@mui/material';
 import AddPasta from './formPasta';
+import DeleteItem from './modalDelete'
 
+function ItemPasta({ item, refresh}) {
+    const [deleteDial, setDeletDial] = useState(false);
+    // const [deletado, set] = useState(false);
+    const handleDelete = () => {
+        setDeletDial(!deleteDial);
+    };
 
-function ItemPasta({ item }) {
+    const handleClose = () =>{
+        setDeletDial(!deleteDial);
+    }
+
+    const deleted = () => {
+        refresh();
+    }
     return (
-        <Button href={`/pastas/${item.id}`}>
-            <Paper
-                className="folder-list item-list"
-                elevation={6}
-                textalign='center'
-                style={{
-                    padding: '0 20px',
-                    boxSizing: 'border-box'
-                }}>
-                {item.nome}
-            </Paper>
-        </Button>
+
+        <Paper
+            className="folder-list item-list"
+            elevation={6}
+            textalign='center'
+            style={{
+                padding: '0 20px',
+                boxSizing: 'border-box'
+            }}>
+            <Grid container spacing={1}>
+                <Grid item xs={6}>
+                    <Button xs={4} href={`/pastas/${item.id}`} >
+                        {item.nome}
+                    </Button>
+                </Grid>
+                <Grid item xs={1}>
+                    <Button xs={1} onClick={handleDelete} >
+                        <FiTrash2 />
+                    </Button>
+                </Grid>
+            </Grid>
+            { deleteDial ?
+            (
+                <DeleteItem item={item} deleteDial={deleteDial} handleClose={handleClose} deleted={deleted} />
+            ) : null
+            }
+
+        </Paper >
     );
 }
 
 function ItemDiagrama({ item, refresh }) {
-    const [anchorEl, setAnchorEl] = React.useState(null);
+    const [anchorEl, setAnchorEl] = useState(null);
+    const [deleteDial, setDeletDial] = useState(false);
     const open = Boolean(anchorEl);
-  
-  
+
+
     const handleDelete = () => {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem("access_token")}`;
-      axios
-          .delete(`/api/diagramas/${item.id}/`)
-          .catch((error) => {
-              console.error('Erro ao deletar diagrama:', error);
-          });
-        //   refresh();
+        setDeletDial(!deleteDial);
+        refresh();
     };
-  
-      
+
     const options = [
         'Apagar',
         'Descrição',
@@ -58,15 +82,15 @@ function ItemDiagrama({ item, refresh }) {
 
     return (
         <Paper
-        className="folder-list item-list"
-        elevation={6}
-        textalign='center'
-        style={{
-            padding: '0 20px',
-            boxSizing: 'border-box',
-            width: '192px',
-            height: '48px',          
-        }}>
+            className="folder-list item-list"
+            elevation={6}
+            textalign='center'
+            style={{
+                padding: '0 20px',
+                boxSizing: 'border-box',
+                width: '192px',
+                height: '48px',
+            }}>
 
             <Grid container alignItems="center" textalign='center' justify="space-between">
                 <Grid item xs={10}>
@@ -111,6 +135,11 @@ function ItemDiagrama({ item, refresh }) {
                     </MenuItem>
                 ))}
             </Menu>
+            { deleteDial ?
+            (
+                <DeleteItem item={item} deleteDial={deleteDial} setDeletDial={setDeletDial}/>
+            ) : null
+            }
         </Paper>
     );
 }
@@ -147,13 +176,13 @@ class Biblioteca extends Component {
         const path = window.location.href.split('/');
         let pageId = Number(path[path.length - 1]);
         if (isNaN(pageId)) {
-            pageId = '';  
-        }       
+            pageId = '';
+        }
 
-        this.setState({ id:pageId }, () => {
+        this.setState({ id: pageId }, () => {
             this.refreshList();
         });
-        
+
     }
 
     toggle = () => {
@@ -175,9 +204,9 @@ class Biblioteca extends Component {
             .post("/api/pastas/", item)
             .then((res) => this.refreshList());
         console.log("adicionando pasta");
-        
+
     };
-    
+
     criarItem = () => {
         const item = {
             nome: ""
@@ -186,11 +215,8 @@ class Biblioteca extends Component {
         this.setState({ activeItem: item, modal: !this.state.modal });
     };
 
-
-        
-
     render() {
-        const { pastas, diagramas, id } = this.state;
+        const { pastas, diagramas } = this.state;
         return (
             <div className="Biblioteca" >
                 <Grid container alignItems="center">
@@ -198,23 +224,13 @@ class Biblioteca extends Component {
                         <h1 style={{ marginlE: '20' }}>Biblioteca</h1>
                     </Grid>
                     <Grid item xs={2}>
-                        <Button variant="outlined">Editar</Button>
-                    </Grid>
-                    <Grid item xs={2}>
                         <Button variant="outlined" onClick={this.criarItem}>
                             <TbPlus size={20} /> Nova Pasta
                         </Button>
                     </Grid>
-                    <Grid item xs={2}>
-                        <Button variant="outlined">
-                            <TbPlus size={20} /> Novo Diagrama
-                        </Button>
-                    </Grid>
-
                 </Grid>
                 <div className="pastas" >
                     <h2 style={{ marginlE: '20' }}>Pastas</h2>
-
                     <Stack
                         className="folder-list"
                         marginTop={5}
@@ -243,7 +259,7 @@ class Biblioteca extends Component {
                         flexWrap="wrap"
                     >
                         {diagramas.map((diagram) => (
-                            <ItemDiagrama key={diagram.id} item={diagram} />
+                            <ItemDiagrama key={diagram.id} item={diagram} refresh={this.refreshList} />
 
                         ))}
                     </Stack>

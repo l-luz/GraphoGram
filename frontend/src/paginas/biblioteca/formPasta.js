@@ -1,71 +1,129 @@
-import React, {Component } from 'react';
+import React, {useState } from 'react';
 import {
-    Button,
     Modal,
-    ModalHeader,
-    ModalBody,
-    ModalFooter,
-    Form,
+    Card,
+    CardHeader,
+    CardContent,
+    CardActions,
     FormGroup,
-    Label,
-    Input,
-} from 'reactstrap';
+    TextField,
+    Button,
+} from '@mui/material';
 
-class AddPasta extends Component {
-    constructor(props) {
-        super(props);
-        this.state = {
-            id: this.props.id,
-            activeItem: props.activeItem,
-            modalOpen: true,
-            modalRef: null,
-            pastaAdd: { descendente: '', nome: '' }
-        }
-    }
-    toggleModal = () => {
-        this.setState({ modalOpen: !this.state.modalOpen });
+const style = {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    width: 725,
+    bgcolor: 'background.paper',
+    boxShadow: 24,
+    p: 4,
+};
+
+const AddPasta = (props) => {
+    const [state, setState] = useState({
+        activeItem: props.activeItem,
+        modalOpen: true,
+        pastaAdd: { descendente: '', nome: '' }
+    });
+
+    const toggleModal = () => {
+        setState({ ...state, modalOpen: !state.modalOpen });
     };
 
-
-    handleChange = (e) => {
+    const handleChange = (e) => {
         const { name, value } = e.target;
-        this.setState((prevState) => ({
+        setState((prevState) => ({
+            ...prevState,
             activeItem: { ...prevState.activeItem, [name]: value }
         }));
     };
-    
 
-    render() {
-        const { activeItem,  modalOpen, modalRef, id} = this.state;
+    const { activeItem, modalOpen } = state;
 
-        return (
-            <Modal isOpen={modalOpen} toggle={this.toggleModal} innerRef={modalRef}>
-                <ModalHeader toggle={this.toggleModal}>Nova Turma {id} </ModalHeader>
-                <ModalBody>
-                    <Form>
-                        <FormGroup>
-                            <Label for="pasta-nome">Nome</Label>
-                            <Input
-                                type="text"
-                                id="pasta-nome"
-                                name="nome"
-                                value={activeItem.pastaAdd}
-                                onChange={this.handleChange}
-                                placeholder="Insira o nome da pasta"
-                            />
-                        </FormGroup>
-
-                    </Form>
-                </ModalBody>
-                <ModalFooter>
-                    <Button color="success" onClick={() => this.props.onSave(activeItem)}>
+    return (
+        <Modal open={modalOpen} onClose={toggleModal}>
+            <Card sx={style}>
+                <CardHeader title="Nova Pasta" />
+                <CardContent>
+                    <FormGroup>
+                        <TextField
+                            type="text"
+                            label="Nome"
+                            id="pasta-nome"
+                            name="nome"
+                            value={activeItem.pastaAdd}
+                            onChange={handleChange}
+                            placeholder="Insira o nome da pasta"
+                            required
+                        />
+                    </FormGroup>
+                </CardContent>
+                <CardActions>
+                    <Button color="success" onClick={() => props.onSave(activeItem)}>
                         Save
                     </Button>
-                </ModalFooter>
-                <div className="modal-overlay" onClick={this.toggleModal}></div>
-            </Modal>
-        );
-    }
+                </CardActions>
+                <div className="modal-overlay" onClick={toggleModal}></div>
+            </Card>
+        </Modal>
+    );
 };
+
+// class AddPasta extends Component {
+//     constructor(props) {
+//         super(props);
+//         this.state = {
+//             activeItem: props.activeItem,
+//             modalOpen: true,
+//             pastaAdd: { descendente: '', nome: '' }
+//         }
+//     }
+//     toggleModal = () => {
+//         this.setState({ modalOpen: !this.state.modalOpen });
+//     };
+
+
+//     handleChange = (e) => {
+//         const { name, value } = e.target;
+//         this.setState((prevState) => ({
+//             activeItem: { ...prevState.activeItem, [name]: value }
+//         }));
+//     };
+    
+
+//     render() {
+//         const { activeItem,  modalOpen } = this.state;
+
+//         return (
+//             <Modal open={modalOpen} onClose={this.toggleModal} >
+//                 <Card sx={style}>
+//                 <CardHeader toggle={this.toggleModal} title="Nova Pasta" />
+//                 <CardContent>
+//                         <FormGroup>
+//                             <TextField
+//                                 type="text"
+//                                 label="Nome"
+//                                 id="pasta-nome"
+//                                 name="nome"
+//                                 value={activeItem.pastaAdd}
+//                                 onChange={this.handleChange}
+//                                 placeholder="Insira o nome da pasta"
+//                                 required
+//                             />
+//                         </FormGroup>
+//                 </CardContent>
+//                 <CardActions>
+//                     <Button color="success" onClick={() => this.props.onSave(activeItem)}>
+//                         Save
+//                     </Button>
+//                 </CardActions>
+//                 <div className="modal-overlay" onClick={this.toggleModal}></div>
+//                 </Card>
+//             </Modal>
+//         );
+//     }
+// };
 
 export default AddPasta;
