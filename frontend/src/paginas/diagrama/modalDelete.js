@@ -1,13 +1,14 @@
-import * as React from 'react';
-import Button from '@mui/material/Button';
-import Dialog from '@mui/material/Dialog';
-import DialogActions from '@mui/material/DialogActions';
-import DialogContent from '@mui/material/DialogContent';
-import DialogContentText from '@mui/material/DialogContentText';
-import DialogTitle from '@mui/material/DialogTitle';
-
+import React, {useState} from 'react';
+import {
+    Button,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogContentText,
+    DialogTitle,
+} from '@mui/material';
 export default function AlertDialog({cy, setDeleteState, proximoNo}) {
-    const [open, setOpen] = React.useState(true);
+    const [open, setOpen] = useState(true);
 
     const delElements = () => {
 
@@ -48,9 +49,9 @@ export default function AlertDialog({cy, setDeleteState, proximoNo}) {
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleClose}>Disagree</Button>
+                    <Button onClick={handleClose}>Cancelar</Button>
                     <Button onClick={delElements} autoFocus>
-                        Agree
+                        Deletar
                     </Button>
                 </DialogActions>
             </Dialog>

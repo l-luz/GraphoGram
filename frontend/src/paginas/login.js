@@ -5,8 +5,7 @@ import {
     Button,
     CssBaseline,
     TextField,
-    FormControlLabel,
-    Checkbox,
+    Snackbar,
     Link,
     Paper,
     Box,
@@ -77,7 +76,7 @@ function Login() {
     return (
         <ThemeProvider theme={defaultTheme}>
             { error ? (
-            <Alert severity="error" onClose={() => {setError(false)}}>This is an error alert — check it out!</Alert>
+            <Alert severity="error" onClose={() => {setError(false)}}>Login ou senha incorretos!</Alert>
 
             ) : null }
 
@@ -142,13 +141,6 @@ function Login() {
                             >
                                 Sign In
                             </Button>
-                            <Grid container>
-                                {/* <Grid item xs>
-                                    <Link href="#" variant="body2">
-                                        Forgot password?
-                                    </Link>
-                                </Grid> */}
-                            </Grid>
                             <Copyright sx={{ mt: 5 }} />
                         </Box>
                     </Box>
