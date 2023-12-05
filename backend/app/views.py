@@ -88,7 +88,7 @@ class DiagramaView(viewsets.ModelViewSet):
 
 class PastaView(viewsets.ModelViewSet):
     serializer_class = SerializadorPasta
-    queryset_pasta = Pasta.objects.all()
+    queryset = Pasta.objects.all()
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
 
