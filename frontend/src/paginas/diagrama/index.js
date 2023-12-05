@@ -1,5 +1,11 @@
 import React, { Component } from 'react';
-import { Grid, Button, TextField } from '@mui/material';
+import {
+    Grid, 
+    Button, 
+    TextField,
+    Snackbar,
+    Alert,
+} from '@mui/material';
 import '../paginas.css';
 import CytoscapeComponent from 'react-cytoscapejs';
 import Cytoscape from 'cytoscape';
@@ -14,6 +20,7 @@ import axios from "axios";
 let initialNode = "node1";
 Cytoscape.use(dagre);
 Cytoscape.use(edgehandles);
+
 
 class Diagrama extends Component {
     constructor(props) {
@@ -33,7 +40,8 @@ class Diagrama extends Component {
                 titulo: '',
                 descricao: '',
             },
-            pageID: ""
+            pageID: "",
+            saved: false,
         };
     }
     recuperaElementos = (cy) => {
@@ -200,14 +208,21 @@ class Diagrama extends Component {
         if (proxNo !== null) { //  recupera o nó seguinte
             proxNo = cy.$('#' + proxNo);
         }
-        else { // cria um novo nó
+        else { // novo nó ou prox qualquer
             const noAtual = cy.$("#" + etapaAtual);
             const vizinhos = noAtual.outgoers(function (ele) {
                 return ele.isNode();
             });
             if (vizinhos.length !== 0) {
-                proxNo = vizinhos[0];
-            } else if (!viewMode) { // criar novo nó
+                try{
+                    const resp_id = noAtual.data("caminho");
+                    proxNo = noAtual.data("respostas")[resp_id].IDNo;
+                }catch {
+                    proxNo = vizinhos[0];
+                }
+
+            } else if (!viewMode && !presentationMode) { // criar novo nó no modo de edicao
+
                 const etapas = this.incrementaCountEtapas();
                 const novoNo = 'node' + etapas;
                 cy.add({
@@ -217,7 +232,7 @@ class Diagrama extends Component {
                 if (noAtual.isNode()) {
                     cy.add({
                         group: 'edges',
-                        data: { source: noAtual.id(), target: novoNo, transicao: false },
+                        data: { source: noAtual.id(), target: novoNo, transicao: true },
                     });
                     cy.layout({
                         name: "dagre",
@@ -228,7 +243,7 @@ class Diagrama extends Component {
                 proxNo = cy.$('#' + novoNo);
             }
         }
-        if (proxNo) {
+        if (proxNo) {        
             if (presentationMode){
                 this.atualizaEtapaApresentacao(proxNo)
             }
@@ -308,16 +323,9 @@ class Diagrama extends Component {
                     }
                 ],
             });
-            newCy.fit(newCy.$(".atual"), 150);
-            newCy.layout({
-                name: "dagre",
-                padding: 24,
-                spacingFactor: 1.5
-            }).run();
-    
+
         } else {
             newCy = cy;
-            console.log("cyok")
         }
 
         if (id === '') { // modo de edição do diagrama
@@ -327,6 +335,13 @@ class Diagrama extends Component {
                 data: { id: initialNode, label: countEtapas, elements: [] },
                 selected: true,
             },);
+            
+            this.setState({etapaAtual: initialNode});
+            newCy.layout({
+                name: "dagre",
+                padding: 24,
+                spacingFactor: 1.5
+            }).run();
 
         } else { // recuperar diagrama existente
             console.log("rec")
@@ -346,7 +361,11 @@ class Diagrama extends Component {
                     });
                     this.recuperaElementos(newCy);
                     newCy.fit(newCy.$(".atual").closedNeighborhood(), 100);
-
+                    newCy.layout({
+                        name: "dagre",
+                        padding: 24,
+                        spacingFactor: 1.5
+                    }).run();
                 }).catch((error) => {
                     console.error('Erro ao recuperar diagrama:', error);
                 });
@@ -362,7 +381,6 @@ class Diagrama extends Component {
             await new Promise(resolve => setTimeout(resolve, 100)); // Aguarde 100 milissegundos antes de verificar novamente
         }
 
-
         const path = window.location.href.split('/');
         let pageId = Number(path[path.length - 1]);
         if (isNaN(pageId)) {
@@ -375,10 +393,7 @@ class Diagrama extends Component {
         if (!this.state.CytoscapeComponent) {
             await new Promise(resolve => setTimeout(resolve, 100)); // Aguarde 100 milissegundos antes de verificar novamente
         }
-        console.log("aqui1")
 
-        
-        console.log("aqui2")
         console.log(this.state.cy, this.state.etapaAtual, this.state.countEtapas, this.state.countPerg )
 
         let defaults = {
@@ -412,13 +427,7 @@ class Diagrama extends Component {
                 this.atualizarEtapaAtual(ele);
             }
         });
-        console.log("aqui3")
     }
-
-    // componentDidUpdate(prevProps, prevState) {
-    //     const { cy, etapaAtual, excalidrawApi } = this.state;
-
-    // }
 
     setExcalidrawApi = (api) => {
         const { cy, etapaAtual, excalidrawApi } = this.state;
@@ -437,6 +446,7 @@ class Diagrama extends Component {
         } else {
             document.body.addEventListener('keydown', this.handleKeyDown);
         }
+        this.setState({ viewMode: !this.state.presentationMode }); 
         this.setState({ presentationMode: !this.state.presentationMode });
         console.log(this.state.cy, this.state.etapaAtual, this.state.countEtapas, this.state.countPerg )
 
@@ -483,14 +493,23 @@ class Diagrama extends Component {
             num_pergs: countPerg,
         }
         axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem("access_token")}`;
-        console.log(pageID)
-        if (pageID === "") {
-            await axios.post("/api/diagramas/", content);
-            console.log("adicionando diagrama");
-        } else {
-            await axios.put(`/api/diagramas/${pageID}/`, content);
-            console.log("atualizando diagrama");
+        console.log(pageID);
+        try{
+            if (pageID === "") {
+                await axios.post("/api/diagramas/", content);
+                console.log("adicionando diagrama");
+            } else {
+                await axios.put(`/api/diagramas/${pageID}/`, content);
+                console.log("atualizando diagrama");
+            }
+            this.setState({saved: true});
         }
+        catch (e) {
+            console.error("Erro ao salvar:", e)
+        }
+    }
+    closeSaveSnack = () => {
+        this.setState({saved: false});
     }
 
     setTitulo = (e) => {
@@ -505,7 +524,6 @@ class Diagrama extends Component {
         this.setState({ diagramaInfo: newItem });
     }
 
-
     handleKeyDown = (event) => {
         console.log("interacao:", this.state.isInteracaoOpen)
         if (!this.state.isInteracaoOpen) {
@@ -517,11 +535,16 @@ class Diagrama extends Component {
         }
     }
 
-
     render() {
-        const { cy, eh, viewMode, presentationMode, etapaAtual, NodeOptions, diagramaInfo } = this.state;
+        const { cy, eh, viewMode, presentationMode, etapaAtual, NodeOptions, diagramaInfo, saved } = this.state;
         return (
             <>
+            <Snackbar open={saved} autoHideDuration={6000} onClose={this.closeSaveSnack}>
+                <Alert onClose={this.closeSaveSnack} severity="success" sx={{ width: '100%' }}>
+                    Diagrama Salvo!
+                </Alert>
+            </Snackbar>
+
                 {presentationMode ?
                     <Grid container spacing={1} style={{ height: '85vh' }}>
                         <DiagramaManager
@@ -626,14 +649,14 @@ class Diagrama extends Component {
                         </Grid>
                     </Grid>
                 }
-                            {this.state.isInteracaoOpen ? (
-                                <ModalInteracao
-                                    etapaAtual={cy.$('#' + etapaAtual)}
-                                    proximoNo={this.proximoNo} // testar this.atualizarEtapaAtual(proxNo);
-                                    interacaoOpen={this.toggleInteracao}
-                                    nodes={NodeOptions}
-                                />
-                            ) : null}
+                    {this.state.isInteracaoOpen ? (
+                        <ModalInteracao
+                            etapaAtual={cy.$('#' + etapaAtual)}
+                            proximoNo={this.proximoNo} // testar this.atualizarEtapaAtual(proxNo);
+                            interacaoOpen={this.toggleInteracao}
+                            nodes={NodeOptions}
+                        />
+                    ) : null}
 
             </>
         );

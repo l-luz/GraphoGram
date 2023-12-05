@@ -12,6 +12,7 @@ import { MdNextPlan } from 'react-icons/md';
 import ModalPergunta from './modalPergunta';
 import AlertDialog from './modalDelete';
 
+
 class ToggleButtons extends Component {
     constructor(props) {
         super(props);
@@ -22,7 +23,8 @@ class ToggleButtons extends Component {
             graphAction: null,
             activeItem: {
                 pergunta: '',
-                respostas: [{ texto: "", IDNo: "", label: "", readOnly: false }],
+                respostas: [{ texto: "", IDNo: "", label: "", readOnly: false}],
+                caminho: 0
             },
             menu: [null, null],
         };
@@ -49,33 +51,34 @@ class ToggleButtons extends Component {
         cy.removeListener('tap');
         eh.disableDrawMode();
 
-        if (toggledOpt === 'transMenu') {
+        if (toggledOpt === 'transMenu') { 
             const selEdges = cy.$('.modify');
-            if (graphAction !== null) {
+            if (graphAction !== null) { // aplica as modificações aos nós marcados
                 selEdges.data('transicao', graphAction === 'acumular'); // booleano
             }
-            selEdges.toggleClass('modify')
+            selEdges.toggleClass('modify'); // descarta modificações
         } else if (toggledOpt === 'delEl') {
-            this.setState({ modalDel: true });
+            this.setState({ modalDel: true }); // chama o modal de deleção
         }
 
-        if (newAlignment === 'addNode') {
+        if (newAlignment === 'addNode') { // adicionar nó
             cy.on('tap', this.adicionarNo);
         }
-        else if (newAlignment === 'pNode') {
-            cy.on('tap', this.adicionarDialogo);
+        else if (newAlignment === 'pNode') { // adicionar nó de pergunta
+            cy.on('tap', this.gerenciarDialogo);
         }
-        else if (newAlignment === 'delEl') {
+        else if (newAlignment === 'delEl') { // ativar seleção de elementos a serem deletados
             cy.on('tap', this.selElements)
             this.setState({ graphAction: newAlignment });
             newAlignment = 'editNodes';
         }
         else if (newAlignment === 'acumular' || newAlignment === 'esconder') { // transMenu
+            // ativar seleção de estados de arestas a serem alteradas
             cy.on('tap', 'edge', (event) => { this.selElements(event, "edge") });
             this.setState({ graphAction: newAlignment });
             newAlignment = 'transMenu';
         }
-        else if (newAlignment === 'addEdge') {
+        else if (newAlignment === 'addEdge') { // adicionar arestas
             eh.enableDrawMode({
             });
             this.setState({ graphAction: newAlignment });
@@ -102,7 +105,7 @@ class ToggleButtons extends Component {
                 });
                 cy.add({
                     group: 'edges',
-                    data: { source: nodeId, target: 'node' + etapas, transicao: false },
+                    data: { source: nodeId, target: 'node' + etapas, transicao: true },
                 });
             } else if (noAtual.outdegree() === 1) {
                 /* 
@@ -126,12 +129,12 @@ class ToggleButtons extends Component {
 
                 cy.add({ // noSelecionado - novoNo 
                     group: 'edges',
-                    data: { source: nodeId, target: 'node' + etapas, transicao: false },
+                    data: { source: nodeId, target: 'node' + etapas, transicao: true },
                 });
 
                 cy.add({ // novoNo - noVizinho
                     group: 'edges',
-                    data: { source: 'node' + etapas, target: noVizinho.id(), transicao: false },
+                    data: { source: 'node' + etapas, target: noVizinho.id(), transicao: true },
                 });
             }
             cy.layout({
@@ -142,36 +145,37 @@ class ToggleButtons extends Component {
         }
     }
 
-    adicionarDialogo = (event) => {
+    gerenciarDialogo = (event) => { // apenas prepara as informações a serem exibidas
         const { cy } = this.props;
+        let noSelecionado = event.target;
 
-        let evtTarget = event.target;
-        if (evtTarget !== cy) {
+        if (noSelecionado !== cy) {
 
-            const labelNode = evtTarget.outgoers(function (ele) {
+            // verifica se há algum nó vizinho (de saída) com a classe "pergunta"
+            const labelNode = noSelecionado.outgoers(function (ele) {
                 if (ele.hasClass("pergunta")) {
                     return ele.isNode();
                 }
             })[0];
-            if (labelNode) {
-                return;
+            if (labelNode) { // caso haja algum nó com label "pergunta" não é possível criar um nó pergunta seguido
+                return; // o usuário deve editar diretamente o diálogo
             }
 
             let caminhos = [];
             let vizinhosData = [];
             let pergunta = '';
-            if (evtTarget.data("label") === '?') { // pega informação do nó
-                vizinhosData = evtTarget.data("respostas");
-                console.log("adicionar nod dialogos")
-                console.log(evtTarget.id())
+            let caminho_default = 0;
+            if (noSelecionado.data("label") === '?') {  // nó de pergunta => recupera informação do nó
+                vizinhosData = noSelecionado.data("respostas");
                 vizinhosData.forEach(vizinho => {
                     const resposta = this.criarResposta(true, vizinho.IDNo, vizinho.label, vizinho.texto);
                     caminhos.push(resposta);
                 });
-                pergunta = evtTarget.data('pergunta')
+                pergunta = noSelecionado.data('pergunta');
+                caminho_default = noSelecionado.data('caminho');
             }
-            else { // verifica adjacentes
-                const vizinhos = evtTarget.outgoers(function (ele) {
+            else { // => verifica nós adjacentes a serem adicionados como opções de resposta
+                const vizinhos = noSelecionado.outgoers(function (ele) {
                     return ele.isNode();
                 });
                 console.log("visinhso")
@@ -183,22 +187,19 @@ class ToggleButtons extends Component {
                     console.log(resposta)
                 });
             }
-            this.criarItem(caminhos, pergunta);
+
+            this.criarItem(caminhos, pergunta, caminho_default);
 
         }
     }
 
-    handleDialogoSubmit = () => {
+    handleDialogoSubmit = () => { // salvar configurações do diálogo
         const { incrementaCountPergs, incrementaCountEtapas, cy } = this.props;
         const { activeItem } = this.state;
-        const respFiltro = activeItem.respostas.filter(item => item.texto.trim() !== "");
+        const respFiltro = activeItem.respostas.filter(item => item.texto.trim() !== ""); // respostas, desconsiderando respostas vazias
         const respData = [];
 
         let countEtapas = incrementaCountEtapas(0) + 1;
-        console.log("dialogo submit")
-        console.log(activeItem.pergunta)
-        console.log(activeItem.respostas)
-
         respFiltro.forEach(data => {
             let id = data.IDNo;
             let label = data.label;
@@ -212,9 +213,11 @@ class ToggleButtons extends Component {
             respData.push({ texto: data.texto, IDNo: id, label: label, novoNo: isNew });
         })
 
-        if (activeItem.pergunta && respData.length > 0) {
+        if (activeItem.pergunta && respData.length > 0) { // modificações
             const noAtual = cy.$(':selected');
             let countPerg = incrementaCountPergs(0);
+
+            // retorna todos os vizinhos (exclui o nó atual)
             const nextNode = noAtual.outgoers(function (ele) {
                 if (ele.id() !== noAtual.id()) {
                     return ele.isNode();
@@ -223,17 +226,25 @@ class ToggleButtons extends Component {
             let pergID = 'pergunta' + countPerg;
 
             const oldResp = [];
-            if (noAtual.isNode() && noAtual.data("label") === '?') {
+            if (noAtual.isNode() && noAtual.data("label") === '?') { // nó pergunta já existe
                 pergID = noAtual.id();
                 console.log("isNode")
                 const pergNodeResp = cy.$('#' + pergID).data("respostas");
                 pergNodeResp.forEach(resp => {
-                    console.log(resp.IDNo)
                     oldResp.push(resp.IDNo);
                 });
+                noAtual.data("respostas", respData);
+                noAtual.data("caminho", activeItem.caminho)
+                console.log("aaaaaaa")
+                console.log(activeItem.caminho);
+                console.log(respData[activeItem.caminho]);
             }
 
-            if ((noAtual.outdegree() === 0 || nextNode.data("label") !== '?') && oldResp.length === 0) { // é preciso criar um nó dialogo
+            console.log("aaaaaaa")
+            console.log(activeItem.caminho);
+            console.log(respData[activeItem.caminho]);
+
+            if ((noAtual.outdegree() === 0 || nextNode.data("label") !== '?') && oldResp.length === 0) { // é preciso criar um nó pergunta
                 /* 
                     estado inicial1: ... noSelecionado
                     estado final2: noSelecionado -> novaAresta -> noDialogo
@@ -247,7 +258,7 @@ class ToggleButtons extends Component {
                 cy.add({
                     group: 'nodes',
                     data: {
-                        id: pergID, label: "?", pergunta: activeItem.pergunta, respostas: respData, elements: []
+                        id: pergID, label: "?", pergunta: activeItem.pergunta, respostas: respData, elements: [], caminho: activeItem.caminho
                     },
                     classes: "pergunta",
                 });
@@ -256,8 +267,7 @@ class ToggleButtons extends Component {
                     group: 'edges',
                     data: { source: noAtual.id(), target: pergID },
                 });
-                console.log("AAaaaa")
-                if (nextNode) {
+                if (nextNode) { // atualiza conexão com o nó seguinte, caso exista
                     noAtual.outgoers().connectedEdges().forEach(function (edge) {
                         const sourceId = edge.source().id();
                         const targetId = edge.target().id();
@@ -300,7 +310,7 @@ class ToggleButtons extends Component {
                     }
                 }
             });
-
+            
             incrementaCountEtapas(soma);
             cy.layout({
                 name: "dagre",
@@ -334,6 +344,7 @@ class ToggleButtons extends Component {
     }
 
     criarResposta = (node, nodeId, nodeLabel, nodeTexto) => {
+        let caminho = false;
         if (node === undefined) {
             nodeId = "novoNo";
             nodeLabel = "";
@@ -344,12 +355,12 @@ class ToggleButtons extends Component {
             texto: nodeTexto,
             IDNo: nodeId,
             label: nodeLabel,
-            readOnly: !(node === undefined)
+            readOnly: !(node === undefined),
         }
         return resposta;
     };
 
-    criarItem = (resps, perg) => {
+    criarItem = (resps, perg, caminho_default) => {
         let respostas = [this.criarResposta()];
 
         if (resps) {
@@ -360,8 +371,10 @@ class ToggleButtons extends Component {
         console.log(respostas)
         const item = {
             pergunta: perg,
-            respostas: respostas
+            respostas: respostas,
+            caminho: caminho_default,
         };
+        console.log(item.caminho)
         this.props.getNodeIDs();
         this.setState({ activeItem: item, modalPerg: !this.state.modalPerg });
     };
@@ -370,6 +383,13 @@ class ToggleButtons extends Component {
         const { activeItem } = this.state;
         const newActiveItem = { ...activeItem, pergunta: e.target.value };
         this.setState({ activeItem: newActiveItem });
+    }
+
+    setCaminho = (e) => {
+        const { activeItem } = this.state;
+        const newActiveItem = { ...activeItem, caminho: Number(e.target.value) };
+        this.setState({ activeItem: newActiveItem });
+        console.log("caminho ",e.target.value)
     }
 
     render() {
@@ -457,6 +477,7 @@ class ToggleButtons extends Component {
                                     onSave={this.handleDialogoSubmit}
                                     nodes={NodeOptions}
                                     setPergunta={this.setPergunta}
+                                    setCaminho={this.setCaminho}
                                 />
                             ) : null}
 

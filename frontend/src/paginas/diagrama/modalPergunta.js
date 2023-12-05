@@ -14,13 +14,14 @@ import {
     Button,
     Select,
     MenuItem,
+    Radio,
 } from '@mui/material';
 
 
-function InstanciaResposta({ count_resp, resposta, handleChange, IDNos, handleDelete }) {
+function InstanciaResposta({ count_resp, resposta, handleChange, IDNos, caminho, handleCaminho }) {
 
     return (
-        <Grid item container xs={12} alignItems="center" spacing={1}>
+        <Grid item container xs={12} alignItems="center" >
             <Grid item xs={6} >
                 <FormControl>
                     <TextField
@@ -44,36 +45,39 @@ function InstanciaResposta({ count_resp, resposta, handleChange, IDNos, handleDe
                             type="text"
                             id={`etapa-caminho-${count_resp}`}
                             name="IDNo"
-                            // value={resposta.IDNo}
                             value={resposta.label}
                             onChange={handleChange}
                             placeholder="ID"
                             disabled
-
                         /> :
-                        <Select
-                            type="text"
-                            label="ID"
-                            id={`etapa-select-${count_resp}`}
-                            name="IDNo"
-                            value={resposta.IDNo ? resposta.IDNo : ""}
-                            onChange={handleChange}
-                            placeholder="ID"
-                        >
-                            {IDNos ? IDNos.map((node) =>
-                                <MenuItem key={node.id} value={node.id}>{node.label}</MenuItem>
-                            ) : null}
-
-                        </Select>
+                        <>
+                            <Select
+                                type="text"
+                                label="ID"
+                                id={`etapa-select-${count_resp}`}
+                                name="IDNo"
+                                value={resposta.IDNo ? resposta.IDNo : ""}
+                                onChange={handleChange}
+                                placeholder="ID"
+                            >
+                                {IDNos ? IDNos.map((node) =>
+                                    <MenuItem key={node.id} value={node.id}>{node.label}</MenuItem>
+                                ) : null}
+                            </Select>
+                        </>
                     }
                 </FormControl>
             </Grid>
-            {/* <Grid item xs={2}>
-                { resposta.readOnly ?
-                null :
-                    <Button onChange={handleDelete}><FaTrash /></Button>
-                }
-            </Grid> */}
+            <Grid item xs={1}>
+                <Radio
+                    placeholder='Caminho'
+                    checked={caminho === count_resp - 1}
+                    onChange={handleCaminho}
+                    value={count_resp - 1}
+                    name="radio-buttons"
+                    inputProps={{ 'aria-label': resposta.label }}
+                />
+            </Grid>
         </Grid>
     );
 }
@@ -95,10 +99,6 @@ class ModalPergunta extends Component {
         this.state = {
             modalOpen: true,
             count_resp: 1,
-            // erros: {
-            //     pergunta: false,
-            //     resposta: false
-            // }
         };
     }
 
@@ -113,53 +113,9 @@ class ModalPergunta extends Component {
         this.setState({ activeItem, count_resp: this.state.count_resp + 1 });
     };
 
-    // handleErrors = () => {
-    //     const { activeItem } = this.props;
-
-    //     if (!activeItem.pergunta) {
-    //         this.setState(prevState => ({
-    //             activeItem: {
-    //                 ...prevState.activeItem,
-    //                 pergunta: true
-    //             },
-    //             erros: {
-    //                 ...prevState.erros,
-    //                 pergunta: true
-    //             }
-    //         }));
-    //     } else {
-    //         this.setState(prevState => ({
-    //             activeItem: {
-    //                 ...prevState.activeItem,
-    //                 pergunta: false
-    //             },
-    //             erros: {
-    //                 ...prevState.erros,
-    //                 pergunta: false
-    //             }
-    //         }));
-    //     }
-    // }
-
-    handleDelete = (id) => {
-        const { activeItem } = this.props;
-        const updatedRespostas = activeItem.respostas.filter((resposta, i) => i !== id);
-        const newActiveItem = { ...activeItem, respostas: updatedRespostas };
-        console.log("filtro")
-        console.log(updatedRespostas)
-        console.log("antes")
-        console.log(activeItem.respostas);
-        this.setState({ activeItem: newActiveItem }, () => {
-            console.log("depois");
-            console.log(this.state.activeItem.respostas);
-        });
-
-    };
-    
-
     render() {
         const { modalOpen } = this.state;
-        const { activeItem, nodes, setPergunta } = this.props;
+        const { activeItem, nodes, setPergunta, setCaminho } = this.props;
         return (
             <Modal open={modalOpen} onClose={this.toggleModal}>
                 <Card sx={style} >
@@ -174,7 +130,7 @@ class ModalPergunta extends Component {
                                         type="text"
                                         id="etapa-pergunta"
                                         name="pergunta"
-                                        defaultValue={ activeItem.pergunta }
+                                        defaultValue={activeItem.pergunta}
                                         onChange={setPergunta}
                                         placeholder="Insira a pergunta"
                                         required
@@ -187,20 +143,14 @@ class ModalPergunta extends Component {
                                     count_resp={index + 1}
                                     resposta={resposta}
                                     IDNos={nodes}
-                                    
                                     handleChange={(e) => {
                                         const novaResposta = [...activeItem.respostas];
                                         novaResposta[index][e.target.name] = e.target.value;
                                         const newActiveItem = { ...activeItem, respostas: novaResposta };
                                         this.setState({ activeItem: newActiveItem });
                                     }}
-                                // handleDelete={() => {
-                                //     const updatedRespostas = activeItem.respostas.filter((resposta, i) => i !== index);
-                                //     const newActiveItem = { ...activeItem, respostas: updatedRespostas };
-                                //     this.setState(prevState => ({ 
-                                //         activeItem: newActiveItem 
-                                //     }));
-                                // }}
+                                    handleCaminho={setCaminho}
+                                    caminho={activeItem.caminho}
                                 />
                             ))}
                         </Grid>
