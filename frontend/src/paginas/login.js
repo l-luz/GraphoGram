@@ -5,14 +5,12 @@ import {
     Button,
     CssBaseline,
     TextField,
-    Snackbar,
-    Link,
     Paper,
     Box,
     Grid,
     Typography,
     createTheme,
-    ThemeProvider
+    ThemeProvider,
 } from '@mui/material/';
 import { AiOutlineLock } from 'react-icons/ai';
 import axios from "axios";
@@ -20,17 +18,12 @@ import axios from "axios";
 function Copyright(props) {
     return (
         <Typography variant="body2" color="text.secondary" align="center" {...props}>
-            {'Copyright © '}
-            <Link color="inherit" href="https://mui.com/">
-                Your Website
-            </Link>{' '}
-            {new Date().getFullYear()}
-            {'.'}
+        {'Copyright © '} 2016-2023, The Cytoscape Consortium.
+        <br />
+        {'Copyright © '} 2020 Excalidraw
         </Typography>
     );
 }
-
-// TODO remove, this demo shouldn't need to reset the theme.
 
 const defaultTheme = createTheme();
 
@@ -38,14 +31,14 @@ function Login() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState(false);
-    // Create the submit method.
+
     const enviarLogin = async e => {
         e.preventDefault();
         const user = {
             username: username,
             password: password
         };
-        // Create the POST request
+
         try {
             const { data } = await
             axios.post('/api/login/',
@@ -57,12 +50,12 @@ function Login() {
             }
             );
 
-            // Initialize the access & refresh token in localstorage.      
+
             localStorage.clear();
             localStorage.setItem('access_token', data.access);
             localStorage.setItem('refresh_token', data.refresh);
             axios.defaults.headers.common['Authorization'] =
-                `Bearer ${data['access']}`; // salva o token no header das requisições
+                `Bearer ${data['access']}`; 
 
                 window.location.href = '/';
                 setError(false);
@@ -113,10 +106,10 @@ function Login() {
                                 margin="normal"
                                 required
                                 fullWidth
-                                id="email"
-                                label="Email Address"
-                                name="email"
-                                autoComplete="email"
+                                id="matricula"
+                                label="Matrícula"
+                                name="matricula"
+                                autoComplete="matricula"
                                 value={username}
                                 onChange={e => setUsername(e.target.value)}
                                 autoFocus
