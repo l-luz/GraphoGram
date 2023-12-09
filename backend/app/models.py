@@ -1,8 +1,7 @@
 from django.db import models
-from django.utils import timezone as tz
-from datetime import timedelta as td
 from django.contrib.auth.models import AbstractUser
 from dateutil.relativedelta import relativedelta as rd
+from datetime import datetime as dt, timedelta as td
 
 
 class User(AbstractUser):
@@ -85,10 +84,10 @@ class AcessoDiagrama(models.Model):
     
     diagrama = models.ForeignKey("Diagrama", db_column="fk_diagrama_id", on_delete=models.CASCADE, null=True, blank=True)
     turma = models.ForeignKey("Turma", db_column="fk_turma_id", on_delete=models.CASCADE, null=True, blank=True)
-    dt_ini_vis = models.DateTimeField(default=tz.now)
+    dt_ini_vis = models.DateTimeField(default=dt.now)
 
     def default_dt_fim_vis():
-        return tz.now() + rd(months=6)
+        return dt.now() + td(days=180)  # 180 dias = 6 meses
 
     dt_fim_vis = models.DateTimeField(default=default_dt_fim_vis)
 
