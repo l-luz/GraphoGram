@@ -11,6 +11,7 @@ router.register(r'usuarios', views.UsuarioView, 'usuario')
 router.register(r'turmas', views.TurmaView, 'turma')
 router.register(r'disciplinas', views.DisciplinaView, 'disciplina')
 router.register(r'participantes', views.ParticipaView, 'participa')
+router.register(r'permissoes', views.PermissoesView, 'permissoes')
 
 urlpatterns = [
     path('api/', include(router.urls)),

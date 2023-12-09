@@ -61,6 +61,7 @@ export default function FullFeaturedCrudGrid({ turma_id }) {
 
     const handleEditClick = (id) => () => {
         setRowModesModel({ ...rowModesModel, [id]: { mode: GridRowModes.Edit } });
+        console.table(rows)
     };
 
     
@@ -143,13 +144,6 @@ export default function FullFeaturedCrudGrid({ turma_id }) {
             width: 100,
             editable: true
         },
-        // {
-        //     field: 'joinDate',
-        //     headerName: 'Acesso',
-        //     type: 'date',
-        //     width: 110,
-        //     editable: false,
-        // },
         {
             field: 'actions',
             type: 'actions',
@@ -198,7 +192,6 @@ export default function FullFeaturedCrudGrid({ turma_id }) {
         },
     ];
 
-
     useEffect(() => {
         if (turma_id){
             recuperaAlunosTurma();
@@ -208,13 +201,11 @@ export default function FullFeaturedCrudGrid({ turma_id }) {
         }
     }, [turma_id]);
 
-
-
     return (
         <Box
             sx={{
                 height: 400,
-                width: '60%',
+                width: '100%',
                 '& .actions': {
                     color: 'text.secondary',
                 },

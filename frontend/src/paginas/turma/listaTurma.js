@@ -1,24 +1,52 @@
-import React, { Component } from 'react';
-import '../paginas.css';
+import React, { Component, useEffect, useState } from 'react';
 import axios from "axios";
 import { FiMoreVertical } from "react-icons/fi";
 import { TbPlus } from "react-icons/tb";
 import {
     Stack, Card, Grid, Button,
-    IconButton, Menu, MenuItem, Typography, Tooltip
+    IconButton, Menu, MenuItem, Typography, Tooltip,
+    Chip
+
 } from '@mui/material';
+import { parseISO } from 'date-fns';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
+
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import AddTurma from './formTurma';
 import FullFeaturedCrudGrid from './tabelaAlunos';
 
 function InstanciaTurma({ turma }) {
-    const [anchorEl, setAnchorEl] = React.useState(null);
-    const [mostrar, setMostrar] = React.useState(true);
+    const [anchorEl, setAnchorEl] = useState(null);
+    const [deleted, setDeleted] = useState(true);
+    const [comPerm, setComPerm] = useState(null);
+    const [semPerm, setSemPerm] = useState(null);
+    const [activeComItem, setActiveComItem] = useState([]);
+    const [activeSemItem, setActiveSemItem] = useState([]);
+        //     {
+        //     dt_ini_vis: '',
+        //     dt_fim_vis: '',
+        // }
+    const getPerms = async () => {
+        axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem("access_token")}`;
+        await axios
+            .get(`/api/permissoes/${turma.id}/`)
+            .then((res) => { setComPerm(res.data.configurados); setSemPerm(res.data.diagramas); })
+            .catch((err) => console.error("Erro ao recuperar permissões", err))
+    };
+
+    useEffect(() => {
+        if (turma) {
+            getPerms();
+        }
+    }, [turma]);
+
     const open = Boolean(anchorEl);
 
     const options = [
         'Excluir Turma',
-        'Permissões',
     ];
+
     const handleClick = (event) => {
         setAnchorEl(event.currentTarget);
     };
@@ -27,26 +55,64 @@ function InstanciaTurma({ turma }) {
         setAnchorEl(null);
     };
 
+    const setChanges = (name, newValue, index, comPerm) => {
+        if (comPerm) {
+            const updatedActiveComItem = [...activeComItem];
+            updatedActiveComItem[index] = { ...updatedActiveComItem[index], [name]: newValue };
+            setActiveComItem(updatedActiveComItem);
+        } else {
+            const updatedActiveSemItem = [...activeSemItem];
+            updatedActiveSemItem[index] = { ...updatedActiveSemItem[index], [name]: newValue };
+            setActiveSemItem(updatedActiveSemItem);
+        }
+    };
+
+    const submitPerm = (index, isComPerm, diagrama_id = null) => async () => {
+        const activeItem = isComPerm ? [...activeComItem] : [...activeSemItem];
+        let itemToUpdate = activeItem[index];
+        if (activeItem[index]) {
+            itemToUpdate.dt_ini_vis = itemToUpdate["dt_ini_vis"].toISOString();
+            itemToUpdate.dt_fim_vis = itemToUpdate["dt_fim_vis"].toISOString();
+
+            if (diagrama_id) {
+                itemToUpdate["diagrama"] = diagrama_id;
+            }
+            itemToUpdate['turma'] = turma.id;
+
+            axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem("access_token")}`;
+            if (isComPerm) {
+                await axios.put(`/api/permissoes/${itemToUpdate.id}/`, itemToUpdate)
+                    .then(getPerms())
+                    .catch((err) => console.error("Erro ao editar permissões", err))
+            } else {
+                await axios.post(`/api/permissoes/`, itemToUpdate)
+                    .then(getPerms())
+                    .catch((err) => console.error("Erro ao criar permissões", err))
+            }
+    
+            console.table(itemToUpdate)
+        }
+    };
+
     const handleOption = (option) => {
         console.log(option)
-        if (option ==="Excluir Turma"){
+        if (option === "Excluir Turma") {
             axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem("access_token")}`;
             axios
-            .delete(`/api/turmas/${turma.id}/`)
-            .catch((err) => console.error("Erro ao deletar Turma" ,err));
-            setMostrar(false);
-        }else if (option ==="Permissões"){
-            console.log("perm");
+                .delete(`/api/turmas/${turma.id}/`)
+                .catch((err) => console.error("Erro ao deletar Turma", err));
+            setDeleted(false);
         }
         handleClose()
     }
 
-    return mostrar ? (
+
+    return deleted ? (
         <Card
             className="diagram-card"
             elevation={6}
             style={{
-                width: '850px',
+                width: '100%',
                 height: '500px',
                 padding: '0 20px',
                 boxSizing: 'border-box'
@@ -56,9 +122,9 @@ function InstanciaTurma({ turma }) {
                 <Grid item xs={10}>
                     <br></br>
                     <Tooltip title={turma.disciplina.nome}>
-                    <Typography variant="h5" gutterBottom>
-                        {turma.codigo} | {turma.disciplina.codigo} | {turma.ano}.{turma.periodo}
-                    </Typography>
+                        <Typography variant="h5" gutterBottom>
+                            {turma.codigo} | {turma.disciplina.codigo} | {turma.ano}.{turma.periodo}
+                        </Typography>
                     </Tooltip>
                 </Grid>
                 <Grid item xs={2}>
@@ -75,11 +141,53 @@ function InstanciaTurma({ turma }) {
                     </IconButton>
                 </Grid>
             </Grid>
-            <Grid item xs={6} >
-                <FullFeaturedCrudGrid turma_id={turma.id}/>
-            </Grid>
-            <Grid item xs={6}>
-                {/* Listar diagramas */}
+            <Grid container alignItems="center" spacing={2} >
+                <Grid item xs={6}>
+                    <FullFeaturedCrudGrid turma_id={turma.id} />
+                </Grid>
+                <Grid item xs={6}>
+                    {comPerm ? comPerm.map((item, index) =>
+                        <Grid container spacing={1} key={index}>
+                            <Grid item xs={3} >
+                                <Chip label={`${item.titulo}`} color="secondary" />
+                            </Grid>
+                            <Grid item xs={3}>
+                                <LocalizationProvider dateAdapter={AdapterDateFns}>
+                                    <DateTimePicker defaultValue={parseISO(item.dt_ini_vis)} label="Disponibilização" onChange={(newValue) => setChanges('dt_ini_vis', newValue, index, true)} />
+                                </LocalizationProvider>
+                            </Grid>
+                            <Grid item xs={3}>
+                                <LocalizationProvider dateAdapter={AdapterDateFns}>
+                                    <DateTimePicker defaultValue={parseISO(item.dt_fim_vis)} label="Validade" onChange={(newValue) => setChanges('dt_fim_vis', newValue, index, true)} />
+                                </LocalizationProvider>
+                            </Grid>
+                            <Grid item xs={2}>
+                                <Button onClick={submitPerm(index, true)}>Salvar</Button>
+                            </Grid>
+                        </Grid>
+                    ) : null}
+
+                    {semPerm ? semPerm.map((item, index) =>
+                        <Grid container spacing={1} key={index}>
+                            <Grid item xs={3} >
+                                <Chip label={`${item.titulo}`} color="warning" />
+                            </Grid>
+                            <Grid item xs={3}>
+                                <LocalizationProvider dateAdapter={AdapterDateFns}>
+                                    <DateTimePicker label="Disponibilização" onChange={(newValue) => setChanges('dt_ini_vis', newValue, index, false)} />
+                                </LocalizationProvider>
+                            </Grid>
+                            <Grid item xs={3}>
+                                <LocalizationProvider dateAdapter={AdapterDateFns}>
+                                    <DateTimePicker label="Validade" onChange={(newValue) => setChanges('dt_fim_vis', newValue, index, false)} />
+                                </LocalizationProvider>
+                            </Grid>
+                            <Grid item xs={2}>
+                                <Button onClick={submitPerm(index, false, item.diagrama_id)}>Salvar</Button>
+                            </Grid>
+                        </Grid>
+                    ) : null}
+                </Grid>
             </Grid>
             <Menu
                 id="long-menu"
@@ -90,14 +198,13 @@ function InstanciaTurma({ turma }) {
                 open={open}
                 onClose={handleClose}
                 style={{
-                    // maxHeight: ITEM_HEIGHT * 4.5,
                     width: '100ch',
                 }}
             >
                 {options.map((option) => (
                     <MenuItem
                         key={option}
-                        onClick={() => {handleOption(option)}}>
+                        onClick={() => { handleOption(option) }}>
                         {option}
                     </MenuItem>
                 ))}
@@ -114,16 +221,16 @@ class Turma extends Component {
             viewCompleted: false,
             modal: false,
             optDisciplinas: [{
-                id: "", 
-                codigo: "", 
+                id: "",
+                codigo: "",
                 nome: ""
             }],
-            turmas:[{
-                id:"", 
+            turmas: [{
+                id: "",
                 disciplina: "",
                 ano: "",
-                periodo: "", 
-                responsavel: "", 
+                periodo: "",
+                responsavel: "",
                 codigo: ""
             }],
         };
@@ -139,10 +246,9 @@ class Turma extends Component {
         axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem("access_token")}`; // salva o token no header das requisições
         axios
             .get("/api/disciplinas/")
-            .then((res) => this.setState({optDisciplinas: res.data}))
+            .then((res) => this.setState({ optDisciplinas: res.data }))
             .catch((err) => console.error('Erro ao recuperar disciplinas:', err));
     };
-
 
     recuperaTurmas = () => {
         axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem("access_token")}`; // salva o token no header das requisições
@@ -158,22 +264,22 @@ class Turma extends Component {
 
     handleSubmit = (item) => {
         this.toggle();
-        if (item.file){
+        if (item.file) {
             const formData = new FormData();
             formData.append('file', item.file[0]);
             formData.append('disciplina', item.disciplina);
             formData.append('ano', item.ano);
             formData.append('periodo', item.periodo);
             formData.append('codigo', item.codigo);
-            if (item.file[0].name != null){
+            if (item.file[0].name != null) {
                 axios
-                .post("/api/turmas/", formData, {
-                    headers: {
-                        'Content-Type': 'multipart/form-data',
-                    },    
-                }).then((res) => this.recuperaTurmas());
-                console.log("adicionando turma");    
-            }    
+                    .post("/api/turmas/", formData, {
+                        headers: {
+                            'Content-Type': 'multipart/form-data',
+                        },
+                    }).then((res) => this.recuperaTurmas());
+                console.log("adicionando turma");
+            }
         }
     };
 
@@ -194,12 +300,12 @@ class Turma extends Component {
     };
 
     render() {
-        const {optDisciplinas, turmas} = this.state;
+        const { optDisciplinas, turmas } = this.state;
         return (
             <div className="Turma" >
                 <Grid container alignItems="center">
                     <Grid item xs={10}>
-                        <h1 style={{ marginleft: '20' }}>Turma</h1>
+                        <h1 style={{ marginleft: '20' }}>Turmas</h1>
                     </Grid>
                     <Grid item xs={2}>
                         <Button variant="outlined" onClick={this.createItem}>
@@ -210,7 +316,6 @@ class Turma extends Component {
 
                 <hr />
                 <div className="alunos">
-                    <h2 style={{ marginlE: '20' }}>Turmas</h2>
                     <Stack
                         className="diagram-list"
                         marginTop={5}

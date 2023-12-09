@@ -40,7 +40,7 @@ const AddTurma = (props) => {
 
     const handleChange = (e, id) => {
         if (e === "disciplina"){
-            setActiveItem({ ...activeItem, ["disciplina"]: id });
+            setActiveItem({ ...activeItem, disciplina: id });
         }else{
             const { name, value } = e.target;
             setActiveItem({ ...activeItem, [name]: value });
@@ -102,7 +102,7 @@ const AddTurma = (props) => {
                         <Grid item xs={6}>
                             <FormControl fullWidth>
                                 <InputLabel id="turma-periodo-label">Periodo</InputLabel>
-                                <Tooltip title="Relativo ao primeiro ou Segundo semestre do ano.">
+                                <Tooltip title="Relativo ao primeiro ou Segundo semestre do ano." placement="right-end">
                                 <Select
                                     labelId="turma-periodo-label"
                                     id="turma-periodo"

@@ -1,19 +1,14 @@
-import base64
-import io
-import tempfile
-from django.http import HttpResponse
-from django.shortcuts import get_object_or_404, render
-from django.shortcuts import render
+from datetime import datetime as dt
+from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework.views import APIView
 from django.db import transaction as db_transaction
 from logger.models import LogEvents
 from logger.functions import log_event
 from django.contrib.auth.hashers import make_password
-
+from django.contrib.auth.models import Group
 
 from app.serializers import *
 from app.models import *
@@ -85,7 +80,6 @@ class DiagramaView(viewsets.ModelViewSet):
         except Exception as e:
             print("Erro:", str(e))
             return Response(erros, status=status.HTTP_400_BAD_REQUEST)
-
 class PastaView(viewsets.ModelViewSet):
     serializer_class = SerializadorPasta
     queryset = Pasta.objects.all()
@@ -93,6 +87,19 @@ class PastaView(viewsets.ModelViewSet):
     authentication_classes = [JWTAuthentication]
 
     def list(self, request):
+        usuario = request.user
+        grupo = request.user.groups.first()
+
+        if grupo.name == "aluno":
+            turmas = Participa.objects.filter(aluno=usuario.id).select_related('turma').values_list('turma', flat=True)
+            pastas = AcessoPasta.objects.filter(turma__in=turmas).select_related('pasta').values_list('pasta', flat=True)
+            pastas_filhas = Pasta.objects.filter(id__in=pastas)
+
+            serializador_pasta = SerializadorPasta(pastas_filhas, many=True)
+            return Response({
+                'pastas': serializador_pasta.data,
+                'diagrama': []
+            })
         return self.retrieve(request)
 
     def retrieve(self, request, pk=None):
@@ -100,20 +107,25 @@ class PastaView(viewsets.ModelViewSet):
             Lista as pastas do usuário de acordo com o nível
         """
         
-        usuario = request.user.id
-        pastasfilhas = Pasta.objects.filter(descendente=pk, dono=usuario)
-        gerencia = Gerencia.objects.filter(criador=usuario).values_list('diagrama', flat=True)
-        diagramasfilhos = Diagrama.objects.filter(pasta=pk, id__in=gerencia)
+        usuario = request.user
+        grupo = request.user.groups.first()
 
-        serializador_pasta = SerializadorPasta(pastasfilhas, many=True)
-        serializador_diagrama = [{'titulo':d.titulo, 'id':d.id, 'dt_criacao':d.dt_criacao} for d in diagramasfilhos]
+        if grupo.name == "aluno":
+            diagramas_filhos = AcessoDiagrama.objects.filter(pasta=pk, dt_fim_vis__gt=dt.today(), dt_ini_vis__lte=dt.today())
+        else:
+            pastas_filhas = Pasta.objects.filter(descendente=pk, dono=usuario.id)
+            gerencia = Gerencia.objects.filter(criador=usuario).values_list('diagrama', flat=True)
+            diagramas_filhos = Diagrama.objects.filter(pasta=pk, id__in=gerencia)
+
+        serializador_pasta = SerializadorPasta(pastas_filhas, many=True)
+        serializador_diagrama = [{'titulo':d.titulo, 'id':d.id, 'dt_criacao':d.dt_criacao} for d in diagramas_filhos]
         log_event(
             request,
             LogEvents.PASTA_ACCESSED,
-            user=request.user
+            user=usuario
         )
         return Response({
-            'pastas': serializador_pasta.data,
+            'pastas': serializador_pasta.data or [],
             'diagramas': serializador_diagrama
         })
 
@@ -122,13 +134,13 @@ class PastaView(viewsets.ModelViewSet):
         if request.method == 'POST':
             data = request.data
             data["dono"] = usuario
+            
             serializer_pasta = SerializadorPasta(data=data)
 
             if serializer_pasta.is_valid():
                 serializer_pasta.save()
                 return Response(serializer_pasta.data, status=status.HTTP_201_CREATED)
             return Response(serializer_pasta.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 class TurmaView(viewsets.ModelViewSet):
     serializer_class = SerializadorTurma
@@ -166,6 +178,30 @@ class TurmaView(viewsets.ModelViewSet):
             with db_transaction.atomic():
                 if serializer_turma.is_valid():
                     serializer_turma.save()
+                    data_pasta = {
+                        "dono": responsavel.id,
+                        "nome": str(serializer_turma.data["disciplina"]["codigo"]) + '_' + str(serializer_turma.data["codigo"]) + '_' + str(serializer_turma.data["ano"]) + '.' + str(serializer_turma.data["codigo"])
+                    }
+                    # Criar pasta da turma
+                    serializer_pasta = SerializadorPasta(data=data_pasta)
+
+                    if serializer_pasta.is_valid():
+                        serializer_pasta.save()
+                    else:
+                        raise Exception("Erro ao criar pasta", serializer_pasta.errors)
+
+                    # Associar pasta a turma
+                    data_acesso_pasta = {
+                        "turma": serializer_turma.data["id"],
+                        "pasta": serializer_pasta.data["id"],
+                    }
+                    serializer_acesso_pasta = SerializadorAcessoPasta(data=data_acesso_pasta)
+
+                    if serializer_acesso_pasta.is_valid():
+                        serializer_acesso_pasta.save()
+                    else:
+                        raise Exception("Erro ao associar permissão de acesso", serializer_acesso_pasta.errors)
+
                     for data_aluno in alunos:
                         data_participa = {}
                         data_participa["turma"] = serializer_turma.data["id"]
@@ -173,7 +209,9 @@ class TurmaView(viewsets.ModelViewSet):
                             aluno_banco = User.objects.get(username=data_aluno["username"])
                             data_participa["aluno"] = aluno_banco.id
                         except User.DoesNotExist:
-                            data_aluno["tipo"] = "aluno"
+                            aluno_group = Group.objects.get(name='aluno')
+                            data_aluno["groups"] = [aluno_group.id]
+                            
                             data_aluno["password"] = make_password("aluno1234")
                             serializer_aluno = SerializadorUsuario(data=data_aluno)
                             if serializer_aluno.is_valid():
@@ -224,7 +262,7 @@ class TurmaView(viewsets.ModelViewSet):
         """
             Retorna as turmas do usuário
         """
-        
+
         usuario = request.user.id
 
         turmas = Turma.objects.filter(responsavel=usuario).select_related("disciplina")
@@ -238,7 +276,6 @@ class DisciplinaView(viewsets.ModelViewSet):
     queryset = Disciplina.objects.all()
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
-
 
 class ParticipaView(viewsets.ModelViewSet):
     serializer_class = SerializadorParticipa()
@@ -254,7 +291,10 @@ class ParticipaView(viewsets.ModelViewSet):
             data_aluno = request.data['aluno']
             data_aluno.pop('id', None)
             data_aluno.pop('isNew', None)
-            data_aluno["tipo"] = "aluno"
+
+            aluno_group = Group.objects.get(name='aluno')
+            data_aluno["groups"] = [aluno_group.id]
+
             data_aluno["password"] = make_password("aluno1234")
 
             serializer_aluno = SerializadorUsuario(data=data_aluno)
@@ -263,11 +303,12 @@ class ParticipaView(viewsets.ModelViewSet):
                 with db_transaction.atomic():
 
                     try: 
-                        aluno_banco = User.objects.get(username=data_aluno["username"])
+                        aluno_banco = User.objects.get(id=data_aluno["aluno_id"])
                         data_participa["aluno"] = aluno_banco.id
                     except User.DoesNotExist:
                         if serializer_aluno.is_valid():
                             serializer_aluno.save()
+                            
                             data_participa["aluno"] = serializer_aluno.data["id"]
                             log_event(
                                 request,
@@ -311,6 +352,13 @@ class UsuarioView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
 
+    @action(detail=False, methods=['get'])
+    def usuario_info(self, request):
+        user_groups = request.user.groups.first()
+        return Response({
+            "tipo": user_groups.name,
+            "nome": request.user.get_nome() or ""
+        })
 
     @action(detail=True, methods=['put'])
     def update_participante(self, request, pk=None):
@@ -326,7 +374,36 @@ class UsuarioView(viewsets.ModelViewSet):
         if serializer_aluno.is_valid():
             serializer_aluno.save()
             return Response(serializer_aluno.data, status=status.HTTP_200_OK)
-        print(serializer_aluno)
-        print(serializer_aluno.errors)
         return Response(serializer_aluno.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class PermissoesView(viewsets.ModelViewSet):
+    serializer_class = SerializadorAcessoDiagrama
+    queryset = AcessoDiagrama.objects.all()
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+
+    def retrieve(self, request, pk=None):
+        usuario = request.user
+        
+        has_perm = AcessoDiagrama.objects.filter(turma=pk).exists()
+        diagramas_perms = None
+        diagramas_config = None
+        gerencia = Gerencia.objects.filter(criador=usuario.id).values_list('diagrama', flat=True)
+        diagramas = Diagrama.objects.filter(id__in=gerencia)
+        if has_perm:
+            perms_existentes = AcessoDiagrama.objects.filter(turma=pk).select_related("diagrama")
+            diagramas_config = [{'id': p.id,'titulo':p.diagrama.titulo, 'diagrama_id':p.diagrama.id, 'dt_ini_vis': p.dt_ini_vis, 'dt_fim_vis': p.dt_fim_vis} for p in perms_existentes]
+            diagramas_perms = perms_existentes.values_list('diagrama', flat=True)
+            diagramas = diagramas.exclude(id__in=diagramas_perms)
+
+        serializer_diagrama = [{'id': None, 'titulo':d.titulo, 'diagrama_id':d.id, 'dt_ini_vis': None, 'dt_fim_vis': None} for d in diagramas]
+
+        print(diagramas)
+        print(serializer_diagrama)
+        print(diagramas_config)
+        return Response({
+            "configurados": diagramas_config,
+            "diagramas": serializer_diagrama,
+        })
+
 
