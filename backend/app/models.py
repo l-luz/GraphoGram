@@ -8,11 +8,14 @@ from dateutil.relativedelta import relativedelta as rd
 class User(AbstractUser):
     id = models.AutoField(primary_key=True)
     
-    tipo = models.CharField(max_length=30, default="aluno")
+    # tipo = models.CharField(max_length=30, default="aluno") # groups do django
     username = models.CharField(max_length=40, unique=True) # matricula
     email = models.EmailField(unique=True, blank=True, null=True)
     nome = models.CharField(max_length=500)
 
+    def get_nome(self):
+        return self.nome.split(' ')[0]
+    
     class Meta:
         db_table = "Usuario"
 
@@ -30,7 +33,7 @@ class Disciplina(models.Model):
 
 class Turma(models.Model):
     id = models.AutoField(primary_key=True)
-    disciplina = models.ForeignKey("Disciplina", db_column="fk_turma_id", on_delete=models.CASCADE)
+    disciplina = models.ForeignKey("Disciplina", db_column="fk_disciplina_id", on_delete=models.CASCADE)
     ano = models.IntegerField()
     periodo = models.IntegerField()
     responsavel = models.ForeignKey("User", related_name="Professor", db_column="fk_usuario_id", on_delete=models.CASCADE)
