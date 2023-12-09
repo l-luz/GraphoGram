@@ -1,12 +1,13 @@
 import React, { Component } from 'react';
 import {
-    Grid, 
-    Button, 
+    Grid,
+    Button,
     TextField,
     Snackbar,
     Alert,
+    ToggleButton,
+    Typography
 } from '@mui/material';
-import '../paginas.css';
 import CytoscapeComponent from 'react-cytoscapejs';
 import Cytoscape from 'cytoscape';
 import dagre from "cytoscape-dagre";
@@ -16,6 +17,26 @@ import DiagramaManager from './diagrama';
 import ModalInteracao from './modalInteracao';
 import edgehandles from 'cytoscape-edgehandles';
 import axios from "axios";
+
+function Copyright(props) {
+    return (
+        <>
+            <Grid container spacing={1}>
+                <Grid item xs={6}>
+                    <Typography variant="body2" color="text.secondary" align="justify" {...props}>
+                        {'Copyright © '} 2016-2023, The Cytoscape Consortium.
+                    </Typography>
+                </Grid>
+                <Grid item xs={5}>
+                    <Typography variant="body2" color="text.secondary" align="justify" {...props}>
+                        {'Copyright © '} 2020 Excalidraw
+                    </Typography>
+
+                </Grid>
+            </Grid>
+        </>
+    );
+}
 
 let initialNode = "node1";
 Cytoscape.use(dagre);
@@ -50,7 +71,7 @@ class Diagrama extends Component {
         excalidrawApi.updateScene({ elements: noAtual.data("elements"), appState: excalidrawApi.getAppState() });
     }
 
-    atualizaEtapaApresentacao  = (novoValor) => {
+    atualizaEtapaApresentacao = (novoValor) => {
         const { cy, etapaAtual, excalidrawApi, viewMode, pageID, presentationMode } = this.state;
         let novoValorID;
         try {
@@ -60,7 +81,7 @@ class Diagrama extends Component {
             novoValor = cy.$('#' + novoValor);
             novoValorID = novoValor;
         }
-        
+
         const noAtual = cy.$("#" + etapaAtual);
         const transicao = novoValor.incomers(function (ele) {
             // recupera as transições para aplicar os efeitos
@@ -95,7 +116,7 @@ class Diagrama extends Component {
 
         const appState = excalidrawApi.getAppState();
         if (novoValor.data("label") === '?' && (viewMode, presentationMode)) {
-                this.setState({ isInteracaoOpen: !this.state.isInteracaoOpen });
+            this.setState({ isInteracaoOpen: !this.state.isInteracaoOpen });
         }
 
         if (!sceneData || sceneData.length === 0) {
@@ -103,9 +124,8 @@ class Diagrama extends Component {
         }
 
         excalidrawApi.updateScene({ elements: sceneData, appState: appState });
-        excalidrawApi.setToast({ message: "Slide " + novoValor.data("label") , closable: true, duration: Infinity });
+        excalidrawApi.setToast({ message: "Slide " + novoValor.data("label"), closable: true, duration: Infinity });
         this.setState({ etapaAtual: novoValorID });
-
     }
 
     atualizarEtapaAtual = (novoValor) => {
@@ -118,7 +138,7 @@ class Diagrama extends Component {
             novoValor = cy.$('#' + novoValor);
             novoValorID = novoValor;
         }
-        
+
         if (pageID) {
             this.recuperaElementos(cy);
         }
@@ -183,7 +203,7 @@ class Diagrama extends Component {
         excalidrawApi.updateScene({ elements: sceneData, appState: appState });
         excalidrawApi.setToast({ message: "Slide " + novoValor.data("label") + textAux, closable: true, duration: Infinity });
         this.setState({ etapaAtual: novoValorID });
-        
+
     };
 
     incrementaCountEtapas = (soma = 1) => {
@@ -198,8 +218,10 @@ class Diagrama extends Component {
 
     proximoNo = (proxNo = null) => {
         const { etapaAtual, cy, viewMode, presentationMode } = this.state;
-        if (proxNo === undefined) { // caso delete, recupera um nó aleatório
-            proxNo = cy.nodes()[0];
+        console.log("proxno", proxNo)
+        if (proxNo === 'del') { // caso delete, recupera um nó aleatório
+            proxNo = cy.nodes()[0].id();
+
             if (!proxNo) {
                 proxNo = null;
             }
@@ -214,10 +236,10 @@ class Diagrama extends Component {
                 return ele.isNode();
             });
             if (vizinhos.length !== 0) {
-                try{
+                try {
                     const resp_id = noAtual.data("caminho");
                     proxNo = noAtual.data("respostas")[resp_id].IDNo;
-                }catch {
+                } catch {
                     proxNo = vizinhos[0];
                 }
 
@@ -243,8 +265,8 @@ class Diagrama extends Component {
                 proxNo = cy.$('#' + novoNo);
             }
         }
-        if (proxNo) {        
-            if (presentationMode){
+        if (proxNo) {
+            if (presentationMode) {
                 this.atualizaEtapaApresentacao(proxNo)
             }
             else {
@@ -254,7 +276,7 @@ class Diagrama extends Component {
     }
 
     noAnterior = () => {
-        const { etapaAtual, cy,presentationMode } = this.state;
+        const { etapaAtual, cy, presentationMode } = this.state;
         const vizinhos = cy.$("#" + etapaAtual).incomers(function (ele) {
             return ele.isNode();
         });
@@ -265,7 +287,7 @@ class Diagrama extends Component {
                 this.atualizaEtapaApresentacao(noAnt)
             } else {
                 this.atualizarEtapaAtual(noAnt);
-                
+
             }
         }
     }
@@ -294,9 +316,22 @@ class Diagrama extends Component {
                         selector: 'edge',
                         style: {
                             'width': 3,
-                            'line-color': '#404040',
-                            'target-arrow-color': '#404040',
-                            'target-arrow-shape': 'chevron',
+                            'line-color': function (ele) {
+                                // Se a propriedade 'transicao' for verdadeira, a cor será verde; caso contrário, azul
+                                return ele.data('transicao') ? '#404040' : '#598ca6';
+                            },
+                            'line-color': function (ele) {
+                                // Se a propriedade 'transicao' for verdadeira, a cor será verde; caso contrário, azul
+                                return ele.data('transicao') ? '#404040' : '#598ca6';
+                            },
+                            'target-arrow-color': function (ele) {
+                                // Se a propriedade 'transicao' for verdadeira, a cor será verde; caso contrário, azul
+                                return ele.data('transicao') ? '#404040' : '#598ca6';
+                            },
+                            'target-arrow-shape': function (ele) {
+                                // Se a propriedade 'transicao' for verdadeira, a cor será verde; caso contrário, azul
+                                return ele.data('transicao') ? 'triangle' : 'triangle-cross';
+                            },
                             'curve-style': 'bezier',
                         }
                     },
@@ -335,8 +370,8 @@ class Diagrama extends Component {
                 data: { id: initialNode, label: countEtapas, elements: [] },
                 selected: true,
             },);
-            
-            this.setState({etapaAtual: initialNode});
+
+            this.setState({ etapaAtual: initialNode });
             newCy.layout({
                 name: "dagre",
                 padding: 24,
@@ -350,13 +385,13 @@ class Diagrama extends Component {
                 .get(`/api/diagramas/${id}/`)
                 .then((res) => {
                     console.log("diagrama!")
-                    newCy.json(res.data.etapas );
+                    newCy.json(res.data.etapas);
                     this.setTitulo(res.data.titulo);
 
-                    this.setState({ 
-                        cy: newCy, 
-                        etapaAtual: newCy.$(".atual").data("id"), 
-                        countEtapas: res.data.num_etapas, 
+                    this.setState({
+                        cy: newCy,
+                        etapaAtual: newCy.$(".atual").data("id"),
+                        countEtapas: res.data.num_etapas,
                         countPerg: res.data.num_pergs
                     });
                     this.recuperaElementos(newCy);
@@ -378,7 +413,7 @@ class Diagrama extends Component {
 
     async componentDidMount() {
         while (!this.state.excalidrawApi) {
-            await new Promise(resolve => setTimeout(resolve, 100)); // Aguarde 100 milissegundos antes de verificar novamente
+            await new Promise(resolve => setTimeout(resolve, 100));
         }
 
         const path = window.location.href.split('/');
@@ -394,7 +429,7 @@ class Diagrama extends Component {
             await new Promise(resolve => setTimeout(resolve, 100)); // Aguarde 100 milissegundos antes de verificar novamente
         }
 
-        console.log(this.state.cy, this.state.etapaAtual, this.state.countEtapas, this.state.countPerg )
+        console.log(this.state.cy, this.state.etapaAtual, this.state.countEtapas, this.state.countPerg)
 
         let defaults = {
             canConnect: function (sourceNode, targetNode) {
@@ -446,9 +481,9 @@ class Diagrama extends Component {
         } else {
             document.body.addEventListener('keydown', this.handleKeyDown);
         }
-        this.setState({ viewMode: !this.state.presentationMode }); 
+        this.setState({ viewMode: !this.state.presentationMode });
         this.setState({ presentationMode: !this.state.presentationMode });
-        console.log(this.state.cy, this.state.etapaAtual, this.state.countEtapas, this.state.countPerg )
+        console.log(this.state.cy, this.state.etapaAtual, this.state.countEtapas, this.state.countPerg)
 
     }
 
@@ -494,7 +529,7 @@ class Diagrama extends Component {
         }
         axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem("access_token")}`;
         console.log(pageID);
-        try{
+        try {
             if (pageID === "") {
                 await axios.post("/api/diagramas/", content);
                 console.log("adicionando diagrama");
@@ -502,14 +537,14 @@ class Diagrama extends Component {
                 await axios.put(`/api/diagramas/${pageID}/`, content);
                 console.log("atualizando diagrama");
             }
-            this.setState({saved: true});
+            this.setState({ saved: true });
         }
         catch (e) {
             console.error("Erro ao salvar:", e)
         }
     }
     closeSaveSnack = () => {
-        this.setState({saved: false});
+        this.setState({ saved: false });
     }
 
     setTitulo = (e) => {
@@ -539,11 +574,11 @@ class Diagrama extends Component {
         const { cy, eh, viewMode, presentationMode, etapaAtual, NodeOptions, diagramaInfo, saved } = this.state;
         return (
             <>
-            <Snackbar open={saved} autoHideDuration={6000} onClose={this.closeSaveSnack}>
-                <Alert onClose={this.closeSaveSnack} severity="success" sx={{ width: '100%' }}>
-                    Diagrama Salvo!
-                </Alert>
-            </Snackbar>
+                <Snackbar open={saved} autoHideDuration={6000} onClose={this.closeSaveSnack}>
+                    <Alert onClose={this.closeSaveSnack} severity="success" sx={{ width: '100%' }}>
+                        Diagrama Salvo!
+                    </Alert>
+                </Snackbar>
 
                 {presentationMode ?
                     <Grid container spacing={1} style={{ height: '85vh' }}>
@@ -551,12 +586,12 @@ class Diagrama extends Component {
                             etapaAtual={etapaAtual} viewMode={viewMode}
                             setExcalidrawApi={this.setExcalidrawApi}
                         />
-                            <Grid item xs={3}>
-                                <Button variant="outlined"
-                                    onClick={() => { this.togglePresentationMode() }}>
-                                    Sair
-                                </Button>
-                            </Grid>
+                        <Grid item xs={3}>
+                            <Button variant="outlined"
+                                onClick={() => { this.togglePresentationMode() }}>
+                                Sair
+                            </Button>
+                        </Grid>
                     </Grid>
                     :
 
@@ -573,31 +608,41 @@ class Diagrama extends Component {
                                     NodeOptions={NodeOptions}
                                 />
                             </Grid>
-                            <Grid item xs={3}>
-                                <TextField id="d-titulo"
-                                    value={diagramaInfo.titulo}
-                                    onChange={this.setTitulo}
-                                    label="Título do Diagrama" variant="outlined"
-                                />
-                            </Grid>
-                            <Grid item xs={3}>
-                                <Button variant="outlined"
-                                    onClick={() => { this.togglePresentationMode() }}>
-                                    Apresentar
-                                </Button>
-                            </Grid>
-                            <Grid item xs={2}>
-                                <Button variant="outlined"
-                                    onClick={() => { this.toggleViewMode() }}>
-                                    Preview
-                                </Button>
-                            </Grid>
+                            <Grid item xs={9} >
+                                <Grid container spacing={1} justifyContent="center" alignItems="center" >
+                                    <Grid item xs={4}>
+                                        <TextField id="d-titulo"
+                                            value={diagramaInfo.titulo}
+                                            onChange={this.setTitulo}
+                                            label="Título do Diagrama" variant="outlined"
+                                            size="small"
+                                        />
+                                    </Grid>
+                                    <Grid item xs={3}>
+                                        <Button variant="outlined"
+                                            onClick={() => { this.togglePresentationMode() }}>
+                                            Apresentar
+                                        </Button>
+                                    </Grid>
+                                    <Grid item xs={2}>
+                                        <ToggleButton
+                                            value="check"
+                                            selected={viewMode}
+                                            onChange={() => {
+                                                this.toggleViewMode();
+                                            }}
+                                            color="secondary"
+                                        > Preview
+                                        </ToggleButton>
+                                    </Grid>
 
-                            <Grid item xs={1}>
-                                <Button variant="outlined"
-                                    onClick={this.salvar}>
-                                    Salvar
-                                </Button>
+                                    <Grid item xs={1}>
+                                        <Button variant="outlined"
+                                            onClick={this.salvar}>
+                                            Salvar
+                                        </Button>
+                                    </Grid>
+                                </Grid>
                             </Grid>
                         </Grid>
                         <Grid item xs={3}
@@ -607,6 +652,7 @@ class Diagrama extends Component {
                             }}>
                             <div style={{
                                 height: '100%',
+                                width: '100%',
                                 display: 'flex',
                                 flexDirection: 'column',
                                 border: '1px solid #179487'
@@ -649,15 +695,17 @@ class Diagrama extends Component {
                         </Grid>
                     </Grid>
                 }
-                    {this.state.isInteracaoOpen ? (
-                        <ModalInteracao
-                            etapaAtual={cy.$('#' + etapaAtual)}
-                            proximoNo={this.proximoNo} // testar this.atualizarEtapaAtual(proxNo);
-                            interacaoOpen={this.toggleInteracao}
-                            nodes={NodeOptions}
-                        />
-                    ) : null}
-
+                {this.state.isInteracaoOpen ? (
+                    <ModalInteracao
+                        etapaAtual={cy.$('#' + etapaAtual)}
+                        proximoNo={this.proximoNo} // testar this.atualizarEtapaAtual(proxNo);
+                        interacaoOpen={this.toggleInteracao}
+                        nodes={NodeOptions}
+                    />
+                ) : null}
+                <footer>
+                    <Copyright />
+                </footer>
             </>
         );
     }

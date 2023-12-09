@@ -4,7 +4,6 @@ import {
     ToggleButtonGroup,
     Menu,
     MenuItem,
-    Button,
     Grid
 } from '@mui/material';
 import { RiFileAddFill, RiQuestionnaireFill, RiNodeTree } from 'react-icons/ri';
@@ -50,15 +49,18 @@ class ToggleButtons extends Component {
 
         cy.removeListener('tap');
         eh.disableDrawMode();
-
+        console.log(toggledOpt)
+        console.log(graphAction)
         if (toggledOpt === 'transMenu') { 
             const selEdges = cy.$('.modify');
             if (graphAction !== null) { // aplica as modificações aos nós marcados
                 selEdges.data('transicao', graphAction === 'acumular'); // booleano
             }
             selEdges.toggleClass('modify'); // descarta modificações
-        } else if (toggledOpt === 'delEl') {
+        } else if(toggledOpt === "editNodes") {
+            if (graphAction === 'delEl') {
             this.setState({ modalDel: true }); // chama o modal de deleção
+            }
         }
 
         if (newAlignment === 'addNode') { // adicionar nó
@@ -235,7 +237,6 @@ class ToggleButtons extends Component {
                 });
                 noAtual.data("respostas", respData);
                 noAtual.data("caminho", activeItem.caminho)
-                console.log("aaaaaaa")
                 console.log(activeItem.caminho);
                 console.log(respData[activeItem.caminho]);
             }
@@ -258,14 +259,15 @@ class ToggleButtons extends Component {
                 cy.add({
                     group: 'nodes',
                     data: {
-                        id: pergID, label: "?", pergunta: activeItem.pergunta, respostas: respData, elements: [], caminho: activeItem.caminho
+                        id: pergID, label: "?", pergunta: activeItem.pergunta, respostas: respData, elements: [], caminho: activeItem.caminho,
+                        transicao: false // garante que os conteúdos não sejam sobrescritos
                     },
-                    classes: "pergunta",
+                    classes: ["pergunta"],
                 });
 
                 cy.add({ // criar noSelecionado -> novaAresta -> noDialogo
                     group: 'edges',
-                    data: { source: noAtual.id(), target: pergID },
+                    data: { source: noAtual.id(), target: pergID, transicao: true },
                 });
                 if (nextNode) { // atualiza conexão com o nó seguinte, caso exista
                     noAtual.outgoers().connectedEdges().forEach(function (edge) {
@@ -339,12 +341,11 @@ class ToggleButtons extends Component {
         }
     }
 
-    setDeleteState = (state) => {
-        this.setState({ modalDel: state })
+    setDeleteState = () => {
+        this.setState({ modalDel: !this.state.modalDel })
     }
 
     criarResposta = (node, nodeId, nodeLabel, nodeTexto) => {
-        let caminho = false;
         if (node === undefined) {
             nodeId = "novoNo";
             nodeLabel = "";
@@ -399,7 +400,7 @@ class ToggleButtons extends Component {
         const openEditMenu = Boolean(menu[1]);
         return (
             <>
-                <Grid container>
+                <Grid container justifyContent="center" alignItems="center">
                     <Grid item>
                         <ToggleButtonGroup
                             value={toggledOpt}
@@ -492,11 +493,6 @@ class ToggleButtons extends Component {
 
                         </ToggleButtonGroup>
                     </Grid>
-                    {/* <Grid item>
-                {this.newActiveItem ? (
-                        <Button onClick={this.handleGraphActions}>Confirmar</Button>
-                    ) : null}
-                </Grid> */}
                 </Grid>
             </>
         );
