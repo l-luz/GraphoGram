@@ -1,10 +1,7 @@
 import React from 'react';
 import {
     Modal,
-    Card,
-    CardHeader,
-    CardContent,
-    CardActions,
+    Card, CardHeader, CardContent, CardActions,
     Button,
 } from '@mui/material';
 

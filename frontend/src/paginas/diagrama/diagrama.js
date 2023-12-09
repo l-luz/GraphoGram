@@ -1,6 +1,6 @@
 import React from 'react';
-import { Excalidraw } from '@excalidraw/excalidraw';
-import { defaultLang } from "@excalidraw/excalidraw";
+import { Excalidraw, defaultLang } from '@excalidraw/excalidraw';
+import './paginas.css';
 
 defaultLang.code = "pt-PT";
 

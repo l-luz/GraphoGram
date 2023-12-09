@@ -1,9 +1,7 @@
 import React, { Component } from 'react';
 import {
         Modal,
-        Card,
-        CardHeader,
-        CardContent,
+        Card, CardHeader, CardContent,
         Grid,
         FormControl,
         Button,

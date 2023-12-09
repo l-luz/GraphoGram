@@ -18,9 +18,9 @@ import axios from "axios";
 function Copyright(props) {
     return (
         <Typography variant="body2" color="text.secondary" align="center" {...props}>
-        {'Copyright © '} 2016-2023, The Cytoscape Consortium.
-        <br />
-        {'Copyright © '} 2020 Excalidraw
+            {'Copyright © '} 2016-2023, The Cytoscape Consortium.
+            <br />
+            {'Copyright © '} 2020 Excalidraw
         </Typography>
     );
 }
@@ -41,37 +41,37 @@ function Login() {
 
         try {
             const { data } = await
-            axios.post('/api/login/',
-                user, {
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                withCredentials: true,
-            }
-            );
+                axios.post('/api/login/',
+                    user, {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    withCredentials: true,
+                }
+                );
 
 
             localStorage.clear();
             localStorage.setItem('access_token', data.access);
             localStorage.setItem('refresh_token', data.refresh);
             axios.defaults.headers.common['Authorization'] =
-                `Bearer ${data['access']}`; 
+                `Bearer ${data['access']}`;
 
-                window.location.href = '/';
-                setError(false);
+            window.location.href = '/';
+            setError(false);
         } catch {
             console.error('Erro ao fazer login. Credenciais inválidas.');
             setError(true);
         }
-        
+
     }
 
     return (
         <ThemeProvider theme={defaultTheme}>
-            { error ? (
-            <Alert severity="error" onClose={() => {setError(false)}}>Login ou senha incorretos!</Alert>
+            {error ? (
+                <Alert severity="error" onClose={() => { setError(false) }}>Login ou senha incorretos!</Alert>
 
-            ) : null }
+            ) : null}
 
             <Grid container component="main" sx={{ height: '100vh' }}>
                 <CssBaseline />

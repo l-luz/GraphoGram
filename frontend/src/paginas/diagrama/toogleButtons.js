@@ -1,9 +1,7 @@
 import React, { Component } from 'react';
 import {
-    ToggleButton,
-    ToggleButtonGroup,
-    Menu,
-    MenuItem,
+    ToggleButton, ToggleButtonGroup,
+    Menu, MenuItem,
     Grid
 } from '@mui/material';
 import { RiFileAddFill, RiQuestionnaireFill, RiNodeTree } from 'react-icons/ri';
