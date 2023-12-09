@@ -5,7 +5,7 @@ export default function Logout () {
     useEffect(() => {
         (async () => {
             try {
-                const { data } = await
+                await
                     axios.post('api/logout/', {
                         refresh_token: localStorage.getItem('refresh_token')
                     }, { headers: { 'Content-Type': 'application/json' } },
@@ -14,7 +14,7 @@ export default function Logout () {
                 axios.defaults.headers.common['Authorization'] = null;
                 window.location.href = '/'
             } catch (e) {
-                console.log('logout not working', e)
+                console.log('Erro no logout', e)
             }
         })();
     }, []);

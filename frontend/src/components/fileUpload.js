@@ -1,6 +1,10 @@
 import * as React from 'react';
-import { styled } from '@mui/material/styles';
-import Button from '@mui/material/Button';
+import { 
+  styled, 
+  Button,
+  Tooltip
+} from '@mui/material';
+
 
 const VisuallyHiddenInput = styled('input')({
   clip: 'rect(0 0 0 0)',
@@ -26,7 +30,9 @@ export default function InputFileUpload({ onFileContentChange }) {
   return (
     <Button component="label" variant="contained">
       Upload file
-      <VisuallyHiddenInput type="file" id="file" name="file"  onChange={handleFileChange} />
+      <Tooltip tittle="O arquivo deve ser no formato .xlsx" placement="right-end">
+        <VisuallyHiddenInput type="file" id="file" name="file" onChange={handleFileChange}/>
+      </Tooltip>
     </Button>
   );
 }

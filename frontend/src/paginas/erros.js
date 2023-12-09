@@ -1,4 +1,8 @@
-import {Link} from 'react-router-dom';
+import {
+    Link
+} from 'react-router-dom';
+
+
 const UnauthorizedPage = () => {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '100px' }}>

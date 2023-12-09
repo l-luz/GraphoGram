@@ -1,6 +1,5 @@
 import React, { Component } from 'react';
 import { HiOutlinePlus } from 'react-icons/hi';
-import { FaTrash } from 'react-icons/fa';
 import {
     Modal,
     Card,

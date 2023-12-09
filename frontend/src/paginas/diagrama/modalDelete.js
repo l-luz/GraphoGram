@@ -1,60 +1,61 @@
-import React, {useState} from 'react';
+import React from 'react';
 import {
+    Modal,
+    Card,
+    CardHeader,
+    CardContent,
+    CardActions,
     Button,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogContentText,
-    DialogTitle,
 } from '@mui/material';
+
+const style = {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    width: 725,
+    bgcolor: 'background.paper',
+    boxShadow: 24,
+    p: 4,
+};
+
 export default function AlertDialog({cy, setDeleteState, proximoNo}) {
-    const [open, setOpen] = useState(true);
+    const open = true;
 
     const delElements = () => {
 
         const selEl = cy.$('.modify');
         if (selEl) {
             cy.remove(selEl);
-            //todo att if ?
-            cy.Nodes('[label = "?"][outdegree = 0]').remove();
-            proximoNo(undefined);
+            cy.nodes('[label = "?"][outdegree = 0]').remove();
+            proximoNo("del");
         }
         selEl.toggleClass('modify');
-        setDeleteState(false);
+        setDeleteState();
     };
 
     const handleClose = () => {
         const selEl = cy.$('.modify');
         selEl.toggleClass('modify');
-        setOpen(false);
-        setDeleteState(false);
+        setDeleteState();
     };
 
     return (
-        <div>
-            <Dialog
-                open={open}
-                onClose={handleClose}
-                aria-labelledby="alert-dialog-title"
-                aria-describedby="alert-dialog-description"
-            >
-                <DialogTitle id="alert-dialog-title">
-                    {"Atenção!!!"}
-                </DialogTitle>
-                <DialogContent>
-                    <DialogContentText id="alert-dialog-description">
-                        Ao confirmar todos os itens selecionados e seus respectivos conteúdos do diagrama serão excluídos.
-                        <br />As transições(arestas) das etapas selecionadas serão apagadas.
-                        <br />As etapas de dialogo sem nenhuma etapa seguinte serão apagados.
-                    </DialogContentText>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleClose}>Cancelar</Button>
-                    <Button onClick={delElements} autoFocus>
-                        Deletar
-                    </Button>
-                </DialogActions>
-            </Dialog>
-        </div>
-    );
+        <Modal open={open} onClose={handleClose}>
+        <Card sx={style}>
+        <CardHeader title="Atenção!!!" />
+        <CardContent>
+                Ao confirmar todos os itens selecionados e seus respectivos conteúdos do diagrama serão excluídos.
+                <br />As transições(arestas) das etapas selecionadas serão apagadas.
+                <br />As etapas de dialogo sem nenhuma etapa seguinte serão apagados.
+        </CardContent>
+        <CardActions>
+            <Button onClick={handleClose}>Cancelar</Button>
+            <Button onClick={delElements} autoFocus>
+                Deletar
+            </Button>
+        </CardActions>
+        </Card>
+    </Modal>
+);
 }
