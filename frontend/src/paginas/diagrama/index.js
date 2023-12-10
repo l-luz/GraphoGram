@@ -1,22 +1,23 @@
 import React, { Component } from 'react';
-import {
-    Grid,
-    Button,
-    TextField,
-    Snackbar,
-    Alert,
-    ToggleButton,
-    Typography
-} from '@mui/material';
+import axios from "axios";
 import CytoscapeComponent from 'react-cytoscapejs';
 import Cytoscape from 'cytoscape';
 import dagre from "cytoscape-dagre";
-import ToggleButtons from "./toogleButtons";
-import { FaArrowLeft, FaArrowRight } from "react-icons/fa"
+import {
+    Grid,
+    Button, IconButton, ToggleButton,
+    TextField, Typography,
+    Snackbar, Alert,
+} from '@mui/material';
+import {
+    FaArrowLeft, FaArrowRight,
+    FaInfoCircle
+} from "react-icons/fa"
 import DiagramaManager from './diagrama';
+import ToggleButtons from "./toogleButtons";
 import ModalInteracao from './modalInteracao';
+
 import edgehandles from 'cytoscape-edgehandles';
-import axios from "axios";
 
 function Copyright(props) {
     return (
@@ -63,6 +64,7 @@ class Diagrama extends Component {
             },
             pageID: "",
             saved: false,
+            showDescricao: false
         };
     }
     recuperaElementos = (cy) => {
@@ -73,19 +75,20 @@ class Diagrama extends Component {
 
     atualizaEtapaApresentacao = (novoValor) => {
         const { cy, etapaAtual, excalidrawApi, viewMode, pageID, presentationMode } = this.state;
+        console.log("atualizar etapa apresentacao")
         let novoValorID;
         try {
             novoValorID = novoValor.id();
 
         } catch (e) {
             novoValor = cy.$('#' + novoValor);
-            novoValorID = novoValor;
+            novoValorID = novoValor.id();
         }
 
         const noAtual = cy.$("#" + etapaAtual);
         const transicao = novoValor.incomers(function (ele) {
             // recupera as transições para aplicar os efeitos
-            if (ele.data('transicao')) {
+            if (ele.hasClass('acumular')) {
                 return ele.isEdge();
             }
         }); // edges array
@@ -122,7 +125,7 @@ class Diagrama extends Component {
         if (!sceneData || sceneData.length === 0) {
             excalidrawApi.resetScene();
         }
-
+        cy.fit(novoValor, 100);
         excalidrawApi.updateScene({ elements: sceneData, appState: appState });
         excalidrawApi.setToast({ message: "Slide " + novoValor.data("label"), closable: true, duration: Infinity });
         this.setState({ etapaAtual: novoValorID });
@@ -131,33 +134,31 @@ class Diagrama extends Component {
     atualizarEtapaAtual = (novoValor) => {
         const { cy, etapaAtual, excalidrawApi, viewMode, pageID } = this.state;
         let novoValorID;
+        console.log("atualizar etapa atual")
         try {
             novoValorID = novoValor.id();
-
         } catch (e) {
             novoValor = cy.$('#' + novoValor);
-            novoValorID = novoValor;
+            novoValorID = novoValor.id();
         }
 
         if (pageID) {
             this.recuperaElementos(cy);
         }
-
         const elements = excalidrawApi.getSceneElements(); // array
-        const noAtual = cy.$("#" + etapaAtual);
-        console.log("noatual", noAtual.id());
-        console.log("novo val", novoValorID);
+        
+        const noAntigo = cy.$("#" + etapaAtual);
 
         const transicao = novoValor.incomers(function (ele) {
             // recupera as transições para aplicar os efeitos
-            if (ele.data('transicao')) {
+            if (ele.hasClass('acumular')) {
                 return ele.isEdge();
             }
         }); // edges array
         // atualiza o no atual
 
-        noAtual.data("elements", elements);
-        noAtual.toggleClass("atual", false);
+        noAntigo.data("elements", elements);
+        noAntigo.toggleClass("atual", false);
         novoValor.toggleClass("atual", true);
 
         let sceneData = novoValor.data("elements"); // recupera elementos do novo nó
@@ -173,11 +174,6 @@ class Diagrama extends Component {
 
                     sourceElements.forEach((element) => {
                         if (!addedIds[element.id] && !sceneData[element.id]) {
-                            console.log("ids")
-
-                            console.log(element.id)
-                            console.log(addedIds)
-
                             sceneData.push(element);
                             addedIds[element.id] = true;
                         }
@@ -187,7 +183,7 @@ class Diagrama extends Component {
         }
 
         const appState = excalidrawApi.getAppState();
-        console.log("->>", this.state.isInteracaoOpen);
+
         let textAux = '';
         if (novoValor.data("label") === '?') {
             if (viewMode) {
@@ -218,7 +214,7 @@ class Diagrama extends Component {
 
     proximoNo = (proxNo = null) => {
         const { etapaAtual, cy, viewMode, presentationMode } = this.state;
-        console.log("proxno", proxNo)
+        console.log("proxno")
         if (proxNo === 'del') { // caso delete, recupera um nó aleatório
             proxNo = cy.nodes()[0].id();
 
@@ -226,7 +222,6 @@ class Diagrama extends Component {
                 proxNo = null;
             }
         }
-
         if (proxNo !== null) { //  recupera o nó seguinte
             proxNo = cy.$('#' + proxNo);
         }
@@ -244,7 +239,6 @@ class Diagrama extends Component {
                 }
 
             } else if (!viewMode && !presentationMode) { // criar novo nó no modo de edicao
-
                 const etapas = this.incrementaCountEtapas();
                 const novoNo = 'node' + etapas;
                 cy.add({
@@ -254,7 +248,8 @@ class Diagrama extends Component {
                 if (noAtual.isNode()) {
                     cy.add({
                         group: 'edges',
-                        data: { source: noAtual.id(), target: novoNo, transicao: true },
+                        data: { source: noAtual.id(), target: novoNo },
+                        classes: ["acumular"]
                     });
                     cy.layout({
                         name: "dagre",
@@ -262,11 +257,12 @@ class Diagrama extends Component {
                         spacingFactor: 1.5
                     }).run();
                 }
+                console.log(novoNo)
                 proxNo = cy.$('#' + novoNo);
             }
         }
         if (proxNo) {
-            if (presentationMode) {
+            if (presentationMode || viewMode) {
                 this.atualizaEtapaApresentacao(proxNo)
             }
             else {
@@ -276,14 +272,14 @@ class Diagrama extends Component {
     }
 
     noAnterior = () => {
-        const { etapaAtual, cy, presentationMode } = this.state;
+        const { etapaAtual, cy, presentationMode, viewMode } = this.state;
         const vizinhos = cy.$("#" + etapaAtual).incomers(function (ele) {
             return ele.isNode();
         });
 
         if (vizinhos.length !== 0) {
             const noAnt = vizinhos[0];
-            if (presentationMode) {
+            if (presentationMode || viewMode) {
                 this.atualizaEtapaApresentacao(noAnt)
             } else {
                 this.atualizarEtapaAtual(noAnt);
@@ -291,7 +287,7 @@ class Diagrama extends Component {
             }
         }
     }
-
+    
     setCytoscape = async (id) => {
         const { cy, countEtapas } = this.state;
         let newCy;
@@ -300,7 +296,7 @@ class Diagrama extends Component {
             console.log("not cy")
             newCy = Cytoscape({
                 container: document.getElementById('cy'),
-                classes: ['atual', 'modify', 'pergunta'],
+                classes: ['atual', 'modify', 'pergunta', 'acumular'],
                 style: [
                     {
                         selector: 'node',
@@ -316,22 +312,19 @@ class Diagrama extends Component {
                         selector: 'edge',
                         style: {
                             'width': 3,
-                            'line-color': function (ele) {
-                                // Se a propriedade 'transicao' for verdadeira, a cor será verde; caso contrário, azul
-                                return ele.data('transicao') ? '#404040' : '#598ca6';
-                            },
-                            'line-color': function (ele) {
-                                // Se a propriedade 'transicao' for verdadeira, a cor será verde; caso contrário, azul
-                                return ele.data('transicao') ? '#404040' : '#598ca6';
-                            },
-                            'target-arrow-color': function (ele) {
-                                // Se a propriedade 'transicao' for verdadeira, a cor será verde; caso contrário, azul
-                                return ele.data('transicao') ? '#404040' : '#598ca6';
-                            },
-                            'target-arrow-shape': function (ele) {
-                                // Se a propriedade 'transicao' for verdadeira, a cor será verde; caso contrário, azul
-                                return ele.data('transicao') ? 'triangle' : 'triangle-cross';
-                            },
+                            'line-color': '#598ca6',
+                            'target-arrow-color': '#598ca6',
+                            'target-arrow-shape': 'triangle-cross',
+                            'curve-style': 'bezier',
+                        }
+                    },
+                    {
+                        selector: '.acumular',
+                        style: {
+                            'width': 3,
+                            'line-color': '#404040',
+                            'target-arrow-color': '#404040',
+                            'target-arrow-shape': 'triangle' ,
                             'curve-style': 'bezier',
                         }
                     },
@@ -386,13 +379,16 @@ class Diagrama extends Component {
                 .then((res) => {
                     console.log("diagrama!")
                     newCy.json(res.data.etapas);
-                    this.setTitulo(res.data.titulo);
 
                     this.setState({
                         cy: newCy,
                         etapaAtual: newCy.$(".atual").data("id"),
                         countEtapas: res.data.num_etapas,
-                        countPerg: res.data.num_pergs
+                        countPerg: res.data.num_pergs,
+                        diagramaInfo: {
+                            titulo: res.data.titulo,
+                            descricao: res.data.descricao
+                        },
                     });
                     this.recuperaElementos(newCy);
                     newCy.fit(newCy.$(".atual").closedNeighborhood(), 100);
@@ -476,10 +472,13 @@ class Diagrama extends Component {
         });
     }
     togglePresentationMode = () => {
-        if (this.state.viewMode) {
+        const {cy, excalidrawApi} = this.state;
+        if (this.state.presentationMode) {
             document.body.removeEventListener('keydown', this.handleKeyDown);
         } else {
             document.body.addEventListener('keydown', this.handleKeyDown);
+            excalidrawApi.updateScene({ elements: excalidrawApi.getSceneElements()});    
+            
         }
         this.setState({ viewMode: !this.state.presentationMode });
         this.setState({ presentationMode: !this.state.presentationMode });
@@ -488,7 +487,7 @@ class Diagrama extends Component {
     }
 
     toggleViewMode = () => {
-        if (this.state.viewMode) {
+        if (this.state.viewMode || this.state.presentationMode) {
             document.body.removeEventListener('keydown', this.handleKeyDown);
         } else {
             document.body.addEventListener('keydown', this.handleKeyDown);
@@ -499,7 +498,9 @@ class Diagrama extends Component {
     toggleInteracao = () => {
         this.setState({ isInteracaoOpen: !this.state.isInteracaoOpen });
     }
-
+    toggleDescricao = () => {
+        this.setState({ showDescricao: !this.state.showDescricao }) 
+    }
     getNodeIDs = () => {
         const { cy } = this.state;
         const nos = [];
@@ -524,6 +525,7 @@ class Diagrama extends Component {
             etapas: cy.json(),
             estrutura: excalidrawApi.getAppState(),
             titulo: this.state.diagramaInfo.titulo || "Novo Diagrama",
+            descricao: this.state.diagramaInfo.descricao,
             num_etapas: countEtapas,
             num_pergs: countPerg,
         }
@@ -547,15 +549,17 @@ class Diagrama extends Component {
         this.setState({ saved: false });
     }
 
-    setTitulo = (e) => {
+    setItem = (e) => {
         const { diagramaInfo } = this.state;
-        let newTitulo;
-        try {
-            newTitulo = e.target.value
-        } catch {
-            newTitulo = e;
+        let newInfo;
+        let tipo  = e.target.name
+        if (tipo === "titulo") {
+            newInfo = e.target.value
+        }else{
+            newInfo = e.target.value
         }
-        const newItem = { ...diagramaInfo, titulo: newTitulo };
+
+        const newItem = { ...diagramaInfo, [tipo]: newInfo };
         this.setState({ diagramaInfo: newItem });
     }
 
@@ -571,7 +575,7 @@ class Diagrama extends Component {
     }
 
     render() {
-        const { cy, eh, viewMode, presentationMode, etapaAtual, NodeOptions, diagramaInfo, saved } = this.state;
+        const { cy, eh, viewMode, presentationMode, etapaAtual, NodeOptions, diagramaInfo, saved, showDescricao } = this.state;
         return (
             <>
                 <Snackbar open={saved} autoHideDuration={6000} onClose={this.closeSaveSnack}>
@@ -613,11 +617,29 @@ class Diagrama extends Component {
                                     <Grid item xs={4}>
                                         <TextField id="d-titulo"
                                             value={diagramaInfo.titulo}
-                                            onChange={this.setTitulo}
+                                            onChange={this.setItem}
                                             label="Título do Diagrama" variant="outlined"
                                             size="small"
+                                            name="titulo"
                                         />
+                                        <IconButton aria-label="descricao-button" onClick={this.toggleDescricao}>
+                                            <FaInfoCircle />
+                                        </IconButton>
                                     </Grid>
+                                    {showDescricao ? (
+                                        <Grid item xs={2}>
+                                            <TextField
+                                                id="descricao"
+                                                label="Descrição"
+                                                multiline
+                                                maxRows={3}
+                                                size="small"
+                                                name="descricao"
+                                                onChange={this.setItem}
+                                                value={diagramaInfo.descricao}
+                                            />
+                                        </Grid>
+                                    ) : null }
                                     <Grid item xs={3}>
                                         <Button variant="outlined"
                                             onClick={() => { this.togglePresentationMode() }}>

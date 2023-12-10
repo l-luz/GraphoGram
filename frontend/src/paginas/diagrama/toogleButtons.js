@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import {
     ToggleButton, ToggleButtonGroup,
     Menu, MenuItem,
-    Grid
+    Grid,
 } from '@mui/material';
 import { RiFileAddFill, RiQuestionnaireFill, RiNodeTree } from 'react-icons/ri';
 import { MdNextPlan } from 'react-icons/md';
@@ -52,9 +52,9 @@ class ToggleButtons extends Component {
         if (toggledOpt === 'transMenu') { 
             const selEdges = cy.$('.modify');
             if (graphAction !== null) { // aplica as modificações aos nós marcados
-                selEdges.data('transicao', graphAction === 'acumular'); // booleano
+                selEdges.toggleClass('acumular', graphAction === 'acumular'); // booleano
             }
-            selEdges.toggleClass('modify'); // descarta modificações
+            selEdges.toggleClass('modify', false); // descarta modificações
         } else if(toggledOpt === "editNodes") {
             if (graphAction === 'delEl') {
             this.setState({ modalDel: true }); // chama o modal de deleção
@@ -105,7 +105,8 @@ class ToggleButtons extends Component {
                 });
                 cy.add({
                     group: 'edges',
-                    data: { source: nodeId, target: 'node' + etapas, transicao: true },
+                    data: { source: nodeId, target: 'node' + etapas},
+                    classes: ["acumular"],
                 });
             } else if (noAtual.outdegree() === 1) {
                 /* 
@@ -129,12 +130,15 @@ class ToggleButtons extends Component {
 
                 cy.add({ // noSelecionado - novoNo 
                     group: 'edges',
-                    data: { source: nodeId, target: 'node' + etapas, transicao: true },
+                    data: { source: nodeId, target: 'node' + etapas },
+                    classes: ["acumular"],
                 });
 
                 cy.add({ // novoNo - noVizinho
                     group: 'edges',
-                    data: { source: 'node' + etapas, target: noVizinho.id(), transicao: true },
+                    data: { source: 'node' + etapas, target: noVizinho.id() },
+                    classes: ["pergunta"],           
+                    // Não tem classe acumular. garante que os conteúdos não sejam sobrescritos
                 });
             }
             cy.layout({
@@ -258,14 +262,14 @@ class ToggleButtons extends Component {
                     group: 'nodes',
                     data: {
                         id: pergID, label: "?", pergunta: activeItem.pergunta, respostas: respData, elements: [], caminho: activeItem.caminho,
-                        transicao: false // garante que os conteúdos não sejam sobrescritos
                     },
                     classes: ["pergunta"],
                 });
 
                 cy.add({ // criar noSelecionado -> novaAresta -> noDialogo
                     group: 'edges',
-                    data: { source: noAtual.id(), target: pergID, transicao: true },
+                    data: { source: noAtual.id(), target: pergID },
+                    classes: ["acumular"],
                 });
                 if (nextNode) { // atualiza conexão com o nó seguinte, caso exista
                     noAtual.outgoers().connectedEdges().forEach(function (edge) {
@@ -407,25 +411,21 @@ class ToggleButtons extends Component {
                             aria-label="text alignment"
                         >
                             {/* toggles de manipulação do grafo */}
-                            {/* <Tooltip title="Crie um novo canvas"> */}
-                            <ToggleButton value="addNode" aria-label="Adicionar No" >
+                            <ToggleButton value="addNode" aria-label="Adicionar No" title="Adicionar Nó" >
                                 <RiFileAddFill />
                             </ToggleButton>
-                            {/* </Tooltip> */}
-                            {/* <Tooltip title="Adicione uma interação"> */}
-                            <ToggleButton value="pNode" aria-label="Adicionar Dialogo" >
+                            <ToggleButton value="pNode" aria-label="Adicionar Dialogo" title="Adicione uma interação">
                                 <RiQuestionnaireFill />
                             </ToggleButton>
-                            {/* </Tooltip> */}
                             <ToggleButton
                                 value="editNodes"
                                 aria-label="right aligned"
-
                                 id="edit-menu"
                                 aria-controls={openEditMenu ? 'edit-menu' : undefined}
                                 aria-haspopup="true"
                                 aria-expanded={openEditMenu ? 'true' : undefined}
                                 onClick={(event) => this.handleMenuClick(event, "editMenu", 1)}
+                                title="Opções de edição"
                             >
                                 <RiNodeTree />
                             </ToggleButton>
@@ -444,7 +444,6 @@ class ToggleButtons extends Component {
                             </Menu>
 
                             {/* toggle relacionado a ações do diagrama */}
-                            {/* <Tooltip title="Personalize as transições entre etapas"> */}
                             <ToggleButton
                                 value="transMenu"
                                 aria-label="justified"
@@ -453,6 +452,7 @@ class ToggleButtons extends Component {
                                 aria-haspopup="true"
                                 aria-expanded={openTransMenu ? 'true' : undefined}
                                 onClick={(event) => this.handleMenuClick(event, "transMenu", 0)}
+                                title="Personalize as transições entre etapas"
                             >
                                 <MdNextPlan />
                             </ToggleButton>
@@ -465,10 +465,21 @@ class ToggleButtons extends Component {
                                     'aria-labelledby': 'trans-menu',
                                 }}
                             >
-                                <MenuItem value="acumular" onClick={(event) => this.handleGraphActions(event, "acumular")}>Acumular</MenuItem>
-                                <MenuItem value="esconder" onClick={(event) => this.handleGraphActions(event, "esconder")}>Esconder</MenuItem>
+                                <MenuItem 
+                                    value="acumular" 
+                                    onClick={(event) => this.handleGraphActions(event, "acumular")}
+                                    title="O conteúdo do slide de origem não é passado para o nó seguinte."
+                                >
+                                        Acumular
+                                </MenuItem>
+                                <MenuItem 
+                                    value="esconder" 
+                                    onClick={(event) => this.handleGraphActions(event, "esconder")}
+                                    title="O conteúdo do slide de origem não é passado para o seguinte."
+                                >
+                                        Esconder
+                                </MenuItem>
                             </Menu>
-                            {/* </Tooltip> */}
                             {this.state.modalPerg ? (
                                 <ModalPergunta
                                     activeItem={this.state.activeItem}
