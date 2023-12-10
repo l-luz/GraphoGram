@@ -32,7 +32,9 @@ const Navbar = () => {
                 .then((resp) => { setUserInfo({tipo: resp.data.tipo, nome: resp.data.nome}) })
                 .catch((err) => console.error("Erro ao recuperar tipo do usuário", err));
         }
-        getUser();
+        if (window.location.href !== "http://localhost:3000/login"){
+            getUser();
+        }
     }, []);
 
 
