@@ -28,11 +28,13 @@ export default function InputFileUpload({ onFileContentChange }) {
   };
 
   return (
+    <Tooltip title="O arquivo deve ser no formato .xlsx" placement="right-end">
+
     <Button component="label" variant="contained">
       Upload file
-      <Tooltip tittle="O arquivo deve ser no formato .xlsx" placement="right-end">
         <VisuallyHiddenInput type="file" id="file" name="file" onChange={handleFileChange}/>
-      </Tooltip>
     </Button>
+    </Tooltip>
+
   );
 }
