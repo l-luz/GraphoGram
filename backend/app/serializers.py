@@ -22,12 +22,12 @@ class SerializadorPasta(serializers.ModelSerializer):
             raise serializers.ValidationError("Pasta pai inválida")
         return value
 
-
     class Meta:
         model = Pasta
         fields = "__all__"
 
 class SerializadorUsuario(serializers.ModelSerializer):
+    # groups = serializers.StringRelatedField(many=True)
     class Meta:
         model = User
         fields = "__all__"
@@ -46,7 +46,7 @@ class SerializadorTurma(serializers.ModelSerializer):
 
     def to_internal_value(self, data):
         if self.context["post"]:
-            print(type(data), type(data["disciplina"]))
+            # print(type(data), type(data["disciplina"]))
             data["disciplina"] = int(data["disciplina"])
         return super().to_internal_value(data)
     class Meta:
@@ -66,4 +66,16 @@ class SerializadorParticipantesTurma(serializers.ModelSerializer):
 class SerializadorParticipa(serializers.ModelSerializer):
     class Meta:
         model = Participa
+        fields = "__all__"
+
+
+class SerializadorAcessoPasta(serializers.ModelSerializer):
+    class Meta:
+        model = AcessoPasta
+        fields = "__all__"
+
+
+class SerializadorAcessoDiagrama(serializers.ModelSerializer):
+    class Meta:
+        model = AcessoDiagrama
         fields = "__all__"

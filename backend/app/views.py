@@ -80,6 +80,8 @@ class DiagramaView(viewsets.ModelViewSet):
         except Exception as e:
             print("Erro:", str(e))
             return Response(erros, status=status.HTTP_400_BAD_REQUEST)
+
+
 class PastaView(viewsets.ModelViewSet):
     serializer_class = SerializadorPasta
     queryset = Pasta.objects.all()
@@ -90,7 +92,7 @@ class PastaView(viewsets.ModelViewSet):
         usuario = request.user
         grupo = request.user.groups.first()
 
-        if grupo.name == "aluno":
+        if grupo == "aluno":
             turmas = Participa.objects.filter(aluno=usuario.id).select_related('turma').values_list('turma', flat=True)
             pastas = AcessoPasta.objects.filter(turma__in=turmas).select_related('pasta').values_list('pasta', flat=True)
             pastas_filhas = Pasta.objects.filter(id__in=pastas)
@@ -100,22 +102,45 @@ class PastaView(viewsets.ModelViewSet):
                 'pastas': serializador_pasta.data,
                 'diagrama': []
             })
-        return self.retrieve(request)
+        else:
+            pastas_filhas = Pasta.objects.filter(descendente=None, dono=usuario.id)
+            gerencia = Gerencia.objects.filter(criador=usuario).values_list('diagrama', flat=True)
+            diagramas_filhos = Diagrama.objects.filter(id__in=gerencia)
+
+            serializador_pasta = SerializadorPasta(pastas_filhas, many=True)
+            serializador_diagrama = [{'titulo':d.titulo, 'descricao': d.descricao, 'id':d.id, 'dt_criacao':d.dt_criacao} for d in diagramas_filhos]
+            # print(serializador_diagrama)
+            # print(serializador_pasta.data)
+            return Response({
+                'pastas': serializador_pasta.data,
+                'diagramas': serializador_diagrama
+            })
 
     def retrieve(self, request, pk=None):
         """
-            Lista as pastas do usuário de acordo com o nível
+            Lista as pastas do usuário de acordo com o nível da pasta
         """
-        
-        usuario = request.user
-        grupo = request.user.groups.first()
 
-        if grupo.name == "aluno":
-            diagramas_filhos = AcessoDiagrama.objects.filter(pasta=pk, dt_fim_vis__gt=dt.today(), dt_ini_vis__lte=dt.today())
+        usuario = request.user
+        if (usuario.is_superuser):
+            grupo = "professor"
         else:
-            pastas_filhas = Pasta.objects.filter(descendente=pk, dono=usuario.id)
-            gerencia = Gerencia.objects.filter(criador=usuario).values_list('diagrama', flat=True)
-            diagramas_filhos = Diagrama.objects.filter(pasta=pk, id__in=gerencia)
+            grupo = request.user.groups.first()
+
+        if grupo == "aluno":
+            acesso = AcessoDiagrama.objects.filter(pasta=pk, dt_fim_vis__gt=dt.today(), dt_ini_vis__lte=dt.today()).values_list("diagrama", flat=True)
+            diagramas_filhos = Diagrama.objects.filter(id__in=acesso)
+        else:
+            if (pk):
+                pastas_filhas = Pasta.objects.filter(descendente=pk, dono=usuario.id)
+                gerencia = Gerencia.objects.filter(criador=usuario).values_list('diagrama', flat=True)
+                has_acesso = AcessoDiagrama.objects.filter(diagrama__in=gerencia, dt_fim_vis__gt=dt.today(), dt_ini_vis__lte=dt.today()).exists()
+                
+                if has_acesso:
+                    acesso = AcessoDiagrama.objects.filter(diagrama__in=gerencia, dt_fim_vis__gt=dt.today(), dt_ini_vis__lte=dt.today()).values_list("diagrama", flat=True)
+                    diagramas_filhos = Diagrama.objects.filter(id__in=acesso)
+                else:
+                    diagramas_filhos = Diagrama.objects.filter(pasta=pk, id__in=gerencia)
 
         serializador_pasta = SerializadorPasta(pastas_filhas, many=True)
         serializador_diagrama = [{'titulo':d.titulo, 'id':d.id, 'dt_criacao':d.dt_criacao} for d in diagramas_filhos]
@@ -124,8 +149,9 @@ class PastaView(viewsets.ModelViewSet):
             LogEvents.PASTA_ACCESSED,
             user=usuario
         )
+
         return Response({
-            'pastas': serializador_pasta.data or [],
+            'pastas': serializador_pasta.data,
             'diagramas': serializador_diagrama
         })
 
@@ -326,8 +352,8 @@ class ParticipaView(viewsets.ModelViewSet):
                         if serializer_participa.is_valid():
                             serializer_participa.save()
                         else:
-                            print("erro ao salvar participante")
-                            print(serializer_participa.errors)
+                            # print("erro ao salvar participante")
+                            # print(serializer_participa.errors)
                             raise Exception(serializer_participa.errors)
                     except Exception as e:
                         print(e)
@@ -354,9 +380,12 @@ class UsuarioView(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def usuario_info(self, request):
-        user_groups = request.user.groups.first()
+        if (request.user.is_superuser):
+            user_groups = "professor"
+        else:
+            user_groups = request.user.groups.first()
         return Response({
-            "tipo": user_groups.name,
+            "tipo": str(user_groups),
             "nome": request.user.get_nome() or ""
         })
 
@@ -398,9 +427,9 @@ class PermissoesView(viewsets.ModelViewSet):
 
         serializer_diagrama = [{'id': None, 'titulo':d.titulo, 'diagrama_id':d.id, 'dt_ini_vis': None, 'dt_fim_vis': None} for d in diagramas]
 
-        print(diagramas)
-        print(serializer_diagrama)
-        print(diagramas_config)
+        # print(diagramas)
+        # print(serializer_diagrama)
+        # print(diagramas_config)
         return Response({
             "configurados": diagramas_config,
             "diagramas": serializer_diagrama,
