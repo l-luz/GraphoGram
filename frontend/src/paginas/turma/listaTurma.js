@@ -95,7 +95,7 @@ function InstanciaTurma({ turma }) {
     };
 
     const handleOption = (option) => {
-        console.log(option)
+        // console.log(option)
         if (option === "Excluir Turma") {
             axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem("access_token")}`;
             axios
@@ -277,8 +277,9 @@ class Turma extends Component {
                         headers: {
                             'Content-Type': 'multipart/form-data',
                         },
-                    }).then((res) => this.recuperaTurmas());
-                console.log("adicionando turma");
+                    }).then((res) => this.recuperaTurmas())
+                    .catch((err) => console.error("Erro ao adicionar turma", err));
+                // console.log("adicionando turma");
             }
         }
     };

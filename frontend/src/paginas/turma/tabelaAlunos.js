@@ -72,25 +72,20 @@ export default function FullFeaturedCrudGrid({ turma_id }) {
     const submit = (row) => {
         if (!row.isNew) {
             axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem("access_token")}`; // salva o token no header das requisições
-            console.log("update")
-            axios.put(`/api/usuarios/${row.aluno_id}/update_participante/`, {aluno: row})
+            // console.log("update")
+            axios
+                .put(`/api/usuarios/${row.aluno_id}/update_participante/`, {aluno: row})
+                .catch((err) => console.error("erro ao atualizar aluno", err));
         } else {
             const participante = {
                 aluno: row,
                 turma_id: turma_id
             }    
-            console.log("create")
             axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem("access_token")}`; // salva o token no header das requisições
             axios.post(`/api/participantes/create_aluno/`, participante)
                 .then((response) => {
-                    console.log('Resposta do POST:', response.data);
-
-                    // Atualize o ID no frontend com o ID retornado pelo backend
                     const novoId = response.data.id;
                     row.aluno_id = novoId;
-
-                    // Faça o que precisar com o novo ID no frontend
-                    console.log('ID atualizado no frontend:', novoId);
                 })
                 .catch((err) => console.error('Erro ao adicionar aluno:', err));
         }
@@ -101,9 +96,6 @@ export default function FullFeaturedCrudGrid({ turma_id }) {
         setRows(rows.filter((row) => row.id !== id));
         axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem("access_token")}`; // salva o token no header das requisições
         axios.delete(`/api/participantes/${id}`)
-        .then((response) => {
-            console.log('Resposta do delete:', response.data);
-        })
         .catch((err) => console.error('Erro ao deletar aluno:', err));
     };
 
@@ -122,7 +114,6 @@ export default function FullFeaturedCrudGrid({ turma_id }) {
     const processRowUpdate = (newRow) => {
         const updatedRow = { ...newRow, isNew: false };
         setRows(rows.map((row) => (row.id === newRow.id ? updatedRow : row)));
-        console.log(rowModesModel)
         submit(newRow);
         return updatedRow;
     };

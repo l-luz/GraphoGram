@@ -21,7 +21,7 @@ function ItemPasta({ item, refresh }) {
     }
 
     const deleted = () => {
-        refresh();
+        // refresh();
     }
     return (
 
@@ -207,7 +207,7 @@ class Biblioteca extends Component {
         axios
             .post("/api/pastas/", item)
             .then((res) => this.refreshList());
-        console.log("adicionando pasta");
+        console.error("adicionando pasta");
 
     };
 

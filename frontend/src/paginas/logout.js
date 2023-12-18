@@ -14,7 +14,7 @@ export default function Logout () {
                 axios.defaults.headers.common['Authorization'] = null;
                 window.location.href = '/'
             } catch (e) {
-                console.log('Erro no logout', e)
+                // console.log('Erro no logout', e)
             }
         })();
     }, []);

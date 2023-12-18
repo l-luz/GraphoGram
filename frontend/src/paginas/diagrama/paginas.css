@@ -1,0 +1,16 @@
+/* Diagramas */
+.custom-styles .excalidraw {
+    --color-primary: #CDE1DF;
+    --color-primary-darker: #179487;
+    --color-primary-darkest: #253332;
+    --color-primary-light: #88e3da;
+    --focus-highlight-color: #179487;
+
+}
+
+.custom-styles .excalidraw.theme--dark {
+    --color-primary: #53C3B8;
+    --color-primary-darker: #253332;
+    --color-primary-darkest: #57948e;
+    --color-primary-light: #CDE1DF;
+}

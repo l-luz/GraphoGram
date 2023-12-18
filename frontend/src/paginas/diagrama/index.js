@@ -75,7 +75,7 @@ class Diagrama extends Component {
 
     atualizaEtapaApresentacao = (novoValor) => {
         const { cy, etapaAtual, excalidrawApi, viewMode, pageID, presentationMode } = this.state;
-        console.log("atualizar etapa apresentacao")
+        // console.log("atualizar etapa apresentacao")
         let novoValorID;
         try {
             novoValorID = novoValor.id();
@@ -118,7 +118,7 @@ class Diagrama extends Component {
         }
 
         const appState = excalidrawApi.getAppState();
-        if (novoValor.data("label") === '?' && (viewMode, presentationMode)) {
+        if (novoValor.data("label") === '?' && (viewMode || presentationMode)) {
             this.setState({ isInteracaoOpen: !this.state.isInteracaoOpen });
         }
 
@@ -134,7 +134,7 @@ class Diagrama extends Component {
     atualizarEtapaAtual = (novoValor) => {
         const { cy, etapaAtual, excalidrawApi, viewMode, pageID } = this.state;
         let novoValorID;
-        console.log("atualizar etapa atual")
+        // console.log("atualizar etapa atual")
         try {
             novoValorID = novoValor.id();
         } catch (e) {
@@ -187,6 +187,7 @@ class Diagrama extends Component {
         let textAux = '';
         if (novoValor.data("label") === '?') {
             if (viewMode) {
+                console.log("aqui", this.state.isInteracaoOpen)
                 this.setState({ isInteracaoOpen: !this.state.isInteracaoOpen });
             }
             textAux = "\n" + novoValor.data('pergunta').slice(0, 30) + "...";
@@ -214,7 +215,7 @@ class Diagrama extends Component {
 
     proximoNo = (proxNo = null) => {
         const { etapaAtual, cy, viewMode, presentationMode } = this.state;
-        console.log("proxno")
+        // console.log("proxno")
         if (proxNo === 'del') { // caso delete, recupera um nó aleatório
             proxNo = cy.nodes()[0].id();
 
@@ -257,7 +258,6 @@ class Diagrama extends Component {
                         spacingFactor: 1.5
                     }).run();
                 }
-                console.log(novoNo)
                 proxNo = cy.$('#' + novoNo);
             }
         }
@@ -377,7 +377,6 @@ class Diagrama extends Component {
             await axios
                 .get(`/api/diagramas/${id}/`)
                 .then((res) => {
-                    console.log("diagrama!")
                     newCy.json(res.data.etapas);
 
                     this.setState({
@@ -425,7 +424,7 @@ class Diagrama extends Component {
             await new Promise(resolve => setTimeout(resolve, 100)); // Aguarde 100 milissegundos antes de verificar novamente
         }
 
-        console.log(this.state.cy, this.state.etapaAtual, this.state.countEtapas, this.state.countPerg)
+        // console.log(this.state.cy, this.state.etapaAtual, this.state.countEtapas, this.state.countPerg)
 
         let defaults = {
             canConnect: function (sourceNode, targetNode) {
@@ -454,7 +453,7 @@ class Diagrama extends Component {
         cy.on('select', 'node', (event) => {
             const ele = event.target;
             if (ele.isNode()) {
-                console.log("select event")
+                // console.log("select event")
                 this.atualizarEtapaAtual(ele);
             }
         });
@@ -466,7 +465,7 @@ class Diagrama extends Component {
 
             if (cy && !etapaAtual && excalidrawApi) { // 
                 this.setState({ etapaAtual: initialNode });
-                console.log("update")
+                // console.log("update")
                 this.atualizarEtapaAtual(cy.$("#" + initialNode));
             }
         });
@@ -482,12 +481,12 @@ class Diagrama extends Component {
         }
         this.setState({ viewMode: !this.state.presentationMode });
         this.setState({ presentationMode: !this.state.presentationMode });
-        console.log(this.state.cy, this.state.etapaAtual, this.state.countEtapas, this.state.countPerg)
+        // console.log(this.state.cy, this.state.etapaAtual, this.state.countEtapas, this.state.countPerg)
 
     }
 
     toggleViewMode = () => {
-        if (this.state.viewMode || this.state.presentationMode) {
+        if (this.state.viewMode ) {
             document.body.removeEventListener('keydown', this.handleKeyDown);
         } else {
             document.body.addEventListener('keydown', this.handleKeyDown);
@@ -530,7 +529,7 @@ class Diagrama extends Component {
             num_pergs: countPerg,
         }
         axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem("access_token")}`;
-        console.log(pageID);
+        // console.log(pageID);
         try {
             if (pageID === "") {
                 await axios.post("/api/diagramas/", content);
@@ -564,7 +563,6 @@ class Diagrama extends Component {
     }
 
     handleKeyDown = (event) => {
-        console.log("interacao:", this.state.isInteracaoOpen)
         if (!this.state.isInteracaoOpen) {
             if (event.key === 'ArrowLeft') {
                 this.noAnterior();

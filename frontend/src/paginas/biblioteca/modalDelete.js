@@ -11,7 +11,7 @@ import axios from "axios";
 
 const DeleteItem = ({item, deleteDial, handleClose, deleted}) => {
     const delItem = () => {
-        console.log(item);
+        // console.log(item);
         axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem("access_token")}`;
         if (item.titulo){
             axios

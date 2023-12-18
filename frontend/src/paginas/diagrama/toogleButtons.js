@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import {
     ToggleButton, ToggleButtonGroup,
     Menu, MenuItem,
-    Grid,
+    Grid, Button
 } from '@mui/material';
 import { RiFileAddFill, RiQuestionnaireFill, RiNodeTree } from 'react-icons/ri';
 import { MdNextPlan } from 'react-icons/md';
@@ -47,8 +47,8 @@ class ToggleButtons extends Component {
 
         cy.removeListener('tap');
         eh.disableDrawMode();
-        console.log(toggledOpt)
-        console.log(graphAction)
+        console.log("toggle",toggledOpt)
+        console.log("action",graphAction)
         if (toggledOpt === 'transMenu') { 
             const selEdges = cy.$('.modify');
             if (graphAction !== null) { // aplica as modificações aos nós marcados
@@ -59,6 +59,11 @@ class ToggleButtons extends Component {
             if (graphAction === 'delEl') {
             this.setState({ modalDel: true }); // chama o modal de deleção
             }
+        }
+        if (newAlignment === "aplicar"){
+            this.setState({newAlignment: null})
+            this.setState({ toggledOpt: null });
+            return;
         }
 
         if (newAlignment === 'addNode') { // adicionar nó
@@ -83,6 +88,8 @@ class ToggleButtons extends Component {
             });
             this.setState({ graphAction: newAlignment });
             newAlignment = 'editNodes';
+        }else{
+            newAlignment = null
         }
         this.setState({ toggledOpt: newAlignment });
     };
@@ -98,7 +105,7 @@ class ToggleButtons extends Component {
 
             if (noAtual.outdegree() === 0) {
                 const etapas = incrementaCountEtapas();
-                console.log(etapas)
+                // console.log(etapas)
                 cy.add({
                     group: 'nodes',
                     data: { id: 'node' + etapas, label: etapas, elements: [] },
@@ -114,7 +121,7 @@ class ToggleButtons extends Component {
                     estado final: noSelecionado - novaAresta1 - novoNo - novaAresta2 - noVizinho
                 */
                 const etapas = incrementaCountEtapas();
-                console.log(etapas)
+                // console.log(etapas)
                 const noVizinho = noAtual.outgoers(function (ele) {
                     return ele.isNode()
                 })[0];
@@ -182,13 +189,9 @@ class ToggleButtons extends Component {
                 const vizinhos = noSelecionado.outgoers(function (ele) {
                     return ele.isNode();
                 });
-                console.log("visinhso")
-                console.log(vizinhos)
-                console.log("-------------")
                 vizinhos.forEach(vizinho => {
                     const resposta = this.criarResposta(vizinho, vizinho.data("id"), vizinho.data("label"), "");
                     caminhos.push(resposta);
-                    console.log(resposta)
                 });
             }
 
@@ -232,20 +235,13 @@ class ToggleButtons extends Component {
             const oldResp = [];
             if (noAtual.isNode() && noAtual.data("label") === '?') { // nó pergunta já existe
                 pergID = noAtual.id();
-                console.log("isNode")
                 const pergNodeResp = cy.$('#' + pergID).data("respostas");
                 pergNodeResp.forEach(resp => {
                     oldResp.push(resp.IDNo);
                 });
                 noAtual.data("respostas", respData);
                 noAtual.data("caminho", activeItem.caminho)
-                console.log(activeItem.caminho);
-                console.log(respData[activeItem.caminho]);
             }
-
-            console.log("aaaaaaa")
-            console.log(activeItem.caminho);
-            console.log(respData[activeItem.caminho]);
 
             if ((noAtual.outdegree() === 0 || nextNode.data("label") !== '?') && oldResp.length === 0) { // é preciso criar um nó pergunta
                 /* 
@@ -275,7 +271,6 @@ class ToggleButtons extends Component {
                     noAtual.outgoers().connectedEdges().forEach(function (edge) {
                         const sourceId = edge.source().id();
                         const targetId = edge.target().id();
-                        console.log(sourceId, targetId, noAtual.id(), nextNode.id())
                         if (sourceId === noAtual.id() && targetId === nextNode.id()) {
                             edge.remove();
                         }
@@ -295,7 +290,6 @@ class ToggleButtons extends Component {
                     soma++;
                     const novaEtapa = etapas + soma;
                     respId = 'node' + novaEtapa;
-                    console.log("respId: " + respId)
                     cy.add({
                         group: 'nodes',
                         data: { id: respId, label: novaEtapa, elements: [] },
@@ -370,14 +364,12 @@ class ToggleButtons extends Component {
             respostas = resps;
             respostas.push(this.criarResposta());
         }
-        console.log("criar item")
-        console.log(respostas)
+        // console.log("criar item")
         const item = {
             pergunta: perg,
             respostas: respostas,
             caminho: caminho_default,
         };
-        console.log(item.caminho)
         this.props.getNodeIDs();
         this.setState({ activeItem: item, modalPerg: !this.state.modalPerg });
     };
@@ -392,7 +384,7 @@ class ToggleButtons extends Component {
         const { activeItem } = this.state;
         const newActiveItem = { ...activeItem, caminho: Number(e.target.value) };
         this.setState({ activeItem: newActiveItem });
-        console.log("caminho ",e.target.value)
+        // console.log("caminho ",e.target.value)
     }
 
     render() {
@@ -499,8 +491,8 @@ class ToggleButtons extends Component {
                                     proximoNo={this.props.proximoNo}
                                 />
                             ) : null}
-
                         </ToggleButtonGroup>
+                        <Button onClick={(event) => this.handleGraphActions(event, "aplicar")} disabled={(toggledOpt) ?false:true}> Concluir </Button>
                     </Grid>
                 </Grid>
             </>

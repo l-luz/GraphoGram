@@ -10,7 +10,7 @@ import {
 function ModalOpcao({ count_resp, resposta, proximoNo, toggleModal }) {
     const handleClick = (event, id) => {
         event.preventDefault();
-        console.log(id);
+        // console.log(id);
         proximoNo(id);
         toggleModal();
     };
